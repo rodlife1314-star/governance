@@ -7,6 +7,31 @@ import {
 
 const router: IRouter = Router();
 
+// Governance JSON — mirrors Rod's actual prototypes/governance.json
+const GOVERNANCE = {
+  default_mode: "local" as const,
+  escalation_rules: {
+    external_information: "cloud",
+    heavy_compute: "cloud",
+    operator_request: "cloud",
+    memory_lookup: "local",
+    competition_planning: "local",
+    web_search: "cloud",
+    document_analysis: "local",
+  } as Record<string, string>,
+  fallback: "local" as const,
+};
+
+// Named-category signals that map directly to governance.json task types
+const GOVERNANCE_SIGNALS: Array<{ patterns: string[]; category: keyof typeof GOVERNANCE.escalation_rules }> = [
+  { patterns: ["web search", "search the web", "search online", "look up online", "google"], category: "web_search" },
+  { patterns: ["external", "external information", "news", "weather", "latest", "realtime", "real-time", "from the internet"], category: "external_information" },
+  { patterns: ["competition planning", "competition prep", "competition strategy", "competition readiness"], category: "competition_planning" },
+  { patterns: ["memory lookup", "retrieve memory", "from memory", "memory bank", "doctrine lookup", "my doctrine", "local memory"], category: "memory_lookup" },
+  { patterns: ["analyse document", "analyze document", "document analysis", "read this file", "summarise this document"], category: "document_analysis" },
+  { patterns: ["heavy compute", "long context", "complex reasoning", "multimodal", "vision", "image analysis", "generate long"], category: "heavy_compute" },
+];
+
 function evaluateQuery(query: string, context?: string): {
   decision: "local" | "cloud" | "hybrid";
   localScore: number;
@@ -19,27 +44,41 @@ function evaluateQuery(query: string, context?: string): {
 
   let localScore = 0.5;
   let cloudScore = 0.5;
+  const matchedCategories: string[] = [];
 
+  // Step 1: Check named governance categories (high-confidence, direct match)
+  for (const { patterns, category } of GOVERNANCE_SIGNALS) {
+    if (patterns.some((p) => text.includes(p))) {
+      const destination = GOVERNANCE.escalation_rules[category];
+      matchedCategories.push(`${category}→${destination}`);
+      if (destination === "local") localScore += 0.25;
+      else if (destination === "cloud") cloudScore += 0.25;
+    }
+  }
+
+  // Step 2: Keyword signal scoring (doctrine-aligned)
   const localSignals = [
     "local", "private", "offline", "sovereign", "doctrine", "memory",
-    "workflow", "file", "personal", "confidential", "secret", "internal",
-    "config", "settings", "rules", "governance",
+    "workflow", "personal", "confidential", "internal", "governance",
+    "centre", "identity", "state", "operator", "heartbeat", "kernel",
+    "sandbo", "rules", "review", "forge", "ice cream", "recipe",
   ];
   const cloudSignals = [
-    "cloud", "internet", "search", "web", "latest", "realtime", "api",
-    "external", "public", "news", "weather", "translate", "complex reasoning",
-    "long context", "multimodal", "image", "vision",
+    "cloud", "internet", "search", "web", "realtime", "api",
+    "public", "news", "weather", "translate", "image", "vision",
+    "research", "simulate", "pattern expansion", "remote",
   ];
 
   for (const signal of localSignals) {
-    if (text.includes(signal)) localScore += 0.08;
+    if (text.includes(signal)) localScore += 0.06;
   }
   for (const signal of cloudSignals) {
-    if (text.includes(signal)) cloudScore += 0.08;
+    if (text.includes(signal)) cloudScore += 0.06;
   }
 
-  if (query.length < 50) localScore += 0.1;
-  if (query.length > 200) cloudScore += 0.1;
+  // Step 3: Query length heuristic
+  if (query.length < 50) localScore += 0.08;
+  if (query.length > 250) cloudScore += 0.08;
 
   localScore = Math.min(localScore, 1.0);
   cloudScore = Math.min(cloudScore, 1.0);
@@ -51,15 +90,19 @@ function evaluateQuery(query: string, context?: string): {
   let decision: "local" | "cloud" | "hybrid";
   let reasoning: string;
 
-  if (localScore >= 0.65) {
+  const govNote = matchedCategories.length > 0
+    ? ` Governance rules matched: [${matchedCategories.join(", ")}].`
+    : "";
+
+  if (localScore >= 0.60) {
     decision = "local";
-    reasoning = `Query matches local-first doctrine patterns (score: ${localScore}). No external compute required — Ollama inference and local memory retrieval are sufficient.`;
-  } else if (cloudScore >= 0.65) {
+    reasoning = `LOCAL route (score: ${localScore}).${govNote} Doctrine-aligned: private context, memory retrieval, or operator-state query. Ollama local inference is sufficient — no external compute required.`;
+  } else if (cloudScore >= 0.60) {
     decision = "cloud";
-    reasoning = `Query requires cloud compute (score: ${cloudScore}). Complexity or external data requirements exceed local inference capabilities.`;
+    reasoning = `CLOUD route (score: ${cloudScore}).${govNote} External compute authorised: external data required, heavy inference, or web search. Per External Compute Authority Law — output must return through Centre for review before becoming permanent.`;
   } else {
     decision = "hybrid";
-    reasoning = `Balanced routing (local: ${localScore}, cloud: ${cloudScore}). Query benefits from local context retrieval combined with cloud inference for final synthesis.`;
+    reasoning = `HYBRID route (local: ${localScore}, cloud: ${cloudScore}).${govNote} Balanced: local context retrieval feeds the prompt; cloud inference handles synthesis or generation. Both legs logged for audit.`;
   }
 
   return {
