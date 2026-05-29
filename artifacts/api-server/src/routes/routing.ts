@@ -30,6 +30,8 @@ const GOVERNANCE_SIGNALS: Array<{ patterns: string[]; category: keyof typeof GOV
   { patterns: ["memory lookup", "retrieve memory", "from memory", "memory bank", "doctrine lookup", "my doctrine", "local memory"], category: "memory_lookup" },
   { patterns: ["analyse document", "analyze document", "document analysis", "read this file", "summarise this document"], category: "document_analysis" },
   { patterns: ["heavy compute", "long context", "complex reasoning", "multimodal", "vision", "image analysis", "generate long"], category: "heavy_compute" },
+  // TensorRT-Edge-LLM specific — always local (hardware inference)
+  { patterns: ["tensorrt", "trt engine", "edge-llm", "jetson", "trt_edgellm", "trt inference", "cuda kernel", "engine builder", "onnx export", "quantise", "quantize", "fp8", "int4 awq", "nvfp4", "kv cache", "speculative decod", "eagle3"], category: "memory_lookup" },
 ];
 
 function evaluateQuery(query: string, context?: string): {
