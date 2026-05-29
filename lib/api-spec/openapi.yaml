@@ -3,13 +3,25 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: OCTAGON - Local-first operator assistant API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: memory
+    description: Memory bank entries
+  - name: doctrine
+    description: Doctrine rules and governance
+  - name: workflows
+    description: Operational workflows
+  - name: routing
+    description: Local vs cloud routing decisions
+  - name: scenarios
+    description: Competition demo scenarios
+  - name: dashboard
+    description: Dashboard aggregates
 paths:
   /healthz:
     get:
@@ -24,6 +36,477 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /memory:
+    get:
+      operationId: listMemoryEntries
+      tags: [memory]
+      summary: List memory entries
+      parameters:
+        - in: query
+          name: tag
+          schema:
+            type: string
+          required: false
+        - in: query
+          name: search
+          schema:
+            type: string
+          required: false
+      responses:
+        "200":
+          description: List of memory entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MemoryEntry"
+    post:
+      operationId: createMemoryEntry
+      tags: [memory]
+      summary: Create a memory entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemoryEntryInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemoryEntry"
+
+  /memory/{id}:
+    get:
+      operationId: getMemoryEntry
+      tags: [memory]
+      summary: Get a memory entry
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+      responses:
+        "200":
+          description: Memory entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemoryEntry"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateMemoryEntry
+      tags: [memory]
+      summary: Update a memory entry
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemoryEntryUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemoryEntry"
+    delete:
+      operationId: deleteMemoryEntry
+      tags: [memory]
+      summary: Delete a memory entry
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+      responses:
+        "204":
+          description: Deleted
+
+  /doctrine:
+    get:
+      operationId: listDoctrineRules
+      tags: [doctrine]
+      summary: List doctrine rules
+      responses:
+        "200":
+          description: List of doctrine rules
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DoctrineRule"
+    post:
+      operationId: createDoctrineRule
+      tags: [doctrine]
+      summary: Create a doctrine rule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DoctrineRuleInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DoctrineRule"
+
+  /doctrine/{id}:
+    patch:
+      operationId: updateDoctrineRule
+      tags: [doctrine]
+      summary: Update a doctrine rule
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DoctrineRuleUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DoctrineRule"
+    delete:
+      operationId: deleteDoctrineRule
+      tags: [doctrine]
+      summary: Delete a doctrine rule
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+      responses:
+        "204":
+          description: Deleted
+
+  /workflows:
+    get:
+      operationId: listWorkflows
+      tags: [workflows]
+      summary: List workflows
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [pending, active, completed, archived]
+          required: false
+      responses:
+        "200":
+          description: List of workflows
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Workflow"
+    post:
+      operationId: createWorkflow
+      tags: [workflows]
+      summary: Create a workflow
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkflowInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workflow"
+
+  /workflows/{id}:
+    get:
+      operationId: getWorkflow
+      tags: [workflows]
+      summary: Get a workflow with steps
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+      responses:
+        "200":
+          description: Workflow with steps
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkflowDetail"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateWorkflow
+      tags: [workflows]
+      summary: Update a workflow
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkflowUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workflow"
+    delete:
+      operationId: deleteWorkflow
+      tags: [workflows]
+      summary: Delete a workflow
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+      responses:
+        "204":
+          description: Deleted
+
+  /workflows/{id}/steps:
+    post:
+      operationId: addWorkflowStep
+      tags: [workflows]
+      summary: Add a step to a workflow
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkflowStepInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkflowStep"
+
+  /workflows/{id}/steps/{stepId}:
+    patch:
+      operationId: updateWorkflowStep
+      tags: [workflows]
+      summary: Update a workflow step status
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+        - in: path
+          name: stepId
+          schema:
+            type: integer
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkflowStepUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkflowStep"
+
+  /routing:
+    get:
+      operationId: listRoutingDecisions
+      tags: [routing]
+      summary: List recent routing decisions
+      responses:
+        "200":
+          description: List of routing decisions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RoutingDecision"
+    post:
+      operationId: evaluateRouting
+      tags: [routing]
+      summary: Evaluate routing for a query
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoutingQuery"
+      responses:
+        "201":
+          description: Routing decision
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoutingDecision"
+
+  /scenarios:
+    get:
+      operationId: listScenarios
+      tags: [scenarios]
+      summary: List demo scenarios
+      responses:
+        "200":
+          description: List of scenarios
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Scenario"
+    post:
+      operationId: createScenario
+      tags: [scenarios]
+      summary: Create a demo scenario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScenarioInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Scenario"
+
+  /scenarios/{id}:
+    get:
+      operationId: getScenario
+      tags: [scenarios]
+      summary: Get a scenario
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+      responses:
+        "200":
+          description: Scenario
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Scenario"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateScenario
+      tags: [scenarios]
+      summary: Update a scenario
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScenarioUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Scenario"
+
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get dashboard summary stats
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /dashboard/activity:
+    get:
+      operationId: getRecentActivity
+      tags: [dashboard]
+      summary: Get recent activity feed
+      responses:
+        "200":
+          description: Recent activity
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityItem"
+
+  /dashboard/routing-stats:
+    get:
+      operationId: getRoutingStats
+      tags: [dashboard]
+      summary: Get local vs cloud routing breakdown
+      responses:
+        "200":
+          description: Routing statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoutingStats"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +517,409 @@ components:
       required:
         - status
 
+    MemoryEntry:
+      type: object
+      required: [id, title, content, tags, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        content:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    MemoryEntryInput:
+      type: object
+      required: [title, content]
+      properties:
+        title:
+          type: string
+          minLength: 1
+        content:
+          type: string
+          minLength: 1
+        tags:
+          type: array
+          items:
+            type: string
+
+    MemoryEntryUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+        content:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+
+    DoctrineRule:
+      type: object
+      required: [id, name, description, priority, scope, action, active, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        priority:
+          type: integer
+        scope:
+          type: string
+          enum: [local, cloud, hybrid]
+        action:
+          type: string
+        conditions:
+          type: ["string", "null"]
+        active:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    DoctrineRuleInput:
+      type: object
+      required: [name, description, priority, scope, action]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        priority:
+          type: integer
+        scope:
+          type: string
+          enum: [local, cloud, hybrid]
+        action:
+          type: string
+        conditions:
+          type: string
+        active:
+          type: boolean
+
+    DoctrineRuleUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        priority:
+          type: integer
+        scope:
+          type: string
+          enum: [local, cloud, hybrid]
+        action:
+          type: string
+        conditions:
+          type: string
+        active:
+          type: boolean
+
+    Workflow:
+      type: object
+      required: [id, name, description, status, stepCount, completedSteps, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [pending, active, completed, archived]
+        stepCount:
+          type: integer
+        completedSteps:
+          type: integer
+        tags:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    WorkflowDetail:
+      type: object
+      required: [id, name, description, status, steps, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [pending, active, completed, archived]
+        steps:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkflowStep"
+        tags:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    WorkflowInput:
+      type: object
+      required: [name, description]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+
+    WorkflowUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [pending, active, completed, archived]
+        tags:
+          type: array
+          items:
+            type: string
+
+    WorkflowStep:
+      type: object
+      required: [id, workflowId, order, action, status]
+      properties:
+        id:
+          type: integer
+        workflowId:
+          type: integer
+        order:
+          type: integer
+        action:
+          type: string
+        description:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [pending, running, completed, failed, skipped]
+        result:
+          type: ["string", "null"]
+        executionMode:
+          type: string
+          enum: [local, cloud, hybrid]
+
+    WorkflowStepInput:
+      type: object
+      required: [action, order]
+      properties:
+        action:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        order:
+          type: integer
+        executionMode:
+          type: string
+          enum: [local, cloud, hybrid]
+
+    WorkflowStepUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [pending, running, completed, failed, skipped]
+        result:
+          type: string
+        executionMode:
+          type: string
+          enum: [local, cloud, hybrid]
+
+    RoutingDecision:
+      type: object
+      required: [id, query, decision, localScore, cloudScore, reasoning, createdAt]
+      properties:
+        id:
+          type: integer
+        query:
+          type: string
+        decision:
+          type: string
+          enum: [local, cloud, hybrid]
+        localScore:
+          type: number
+        cloudScore:
+          type: number
+        reasoning:
+          type: string
+        latencyMs:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    RoutingQuery:
+      type: object
+      required: [query]
+      properties:
+        query:
+          type: string
+          minLength: 1
+        context:
+          type: string
+
+    Scenario:
+      type: object
+      required: [id, name, description, status, steps, tags, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [draft, ready, running, completed]
+        steps:
+          type: array
+          items:
+            type: string
+        tags:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    ScenarioInput:
+      type: object
+      required: [name, description]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        steps:
+          type: array
+          items:
+            type: string
+        tags:
+          type: array
+          items:
+            type: string
+
+    ScenarioUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [draft, ready, running, completed]
+        steps:
+          type: array
+          items:
+            type: string
+        tags:
+          type: array
+          items:
+            type: string
+
+    DashboardSummary:
+      type: object
+      required: [totalMemoryEntries, totalDoctrineRules, totalWorkflows, activeWorkflows, completedWorkflows, totalRoutingDecisions, localDecisions, cloudDecisions, hybridDecisions, totalScenarios, readyScenarios]
+      properties:
+        totalMemoryEntries:
+          type: integer
+        totalDoctrineRules:
+          type: integer
+        totalWorkflows:
+          type: integer
+        activeWorkflows:
+          type: integer
+        completedWorkflows:
+          type: integer
+        totalRoutingDecisions:
+          type: integer
+        localDecisions:
+          type: integer
+        cloudDecisions:
+          type: integer
+        hybridDecisions:
+          type: integer
+        totalScenarios:
+          type: integer
+        readyScenarios:
+          type: integer
+
+    ActivityItem:
+      type: object
+      required: [id, type, title, description, createdAt]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [memory, doctrine, workflow, routing, scenario]
+        title:
+          type: string
+        description:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    RoutingStats:
+      type: object
+      required: [local, cloud, hybrid, total]
+      properties:
+        local:
+          type: integer
+        cloud:
+          type: integer
+        hybrid:
+          type: integer
+        total:
+          type: integer
+        localPct:
+          type: number
+        cloudPct:
+          type: number
+        hybridPct:
+          type: number

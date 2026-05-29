@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "OCTAGON"
+version = "1.0.0"
+id = "artifacts/octagon"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 25183
+
+[services.development]
+run = "pnpm --filter @workspace/octagon run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/octagon", "run", "build" ]
+publicDir = "artifacts/octagon/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25183"
+BASE_PATH = "/"
