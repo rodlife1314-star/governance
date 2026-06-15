@@ -181,6 +181,7 @@ interface RapidsCache {
   computedAt: number | null;
   error: string | null;
   fieldSnapshot: Record<string, unknown> | null;
+  assetKey: string | null;
 }
 
 const rapidsCache: RapidsCache = {
@@ -189,44 +190,63 @@ const rapidsCache: RapidsCache = {
   computedAt: null,
   error: null,
   fieldSnapshot: null,
+  assetKey: null,
+};
+
+// Asset-specific dimension overrides (5th dimension varies by asset class)
+const ASSET_DIMENSIONS: Record<string, { id: string; name: string }> = {
+  BTC:  { id: "onchain",   name: "On-Chain Activity" },
+  XAU:  { id: "safehaven", name: "Safe Haven Flow" },
+  NDX:  { id: "earnings",  name: "Earnings / Growth" },
+  US30: { id: "industrial",name: "Industrial Output" },
+  XAG:  { id: "industrial",name: "Industrial Demand" },
 };
 
 async function runDimensionalAnalysis(body: Record<string, unknown>) {
-  const { spotPrice, futuresPrice, basisDelta, volume, openInterest, btcDominance, spreadSpot, depthBidsSpot, futuresBasis, source } = body as Record<string, number & string>;
+  const {
+    spotPrice, futuresPrice, basisDelta, volume, openInterest,
+    btcDominance, spreadSpot, depthBidsSpot, futuresBasis, source,
+    assetKey, assetLabel, assetPair,
+  } = body as Record<string, number & string>;
+
   const marketStructure = (basisDelta as number) >= 0 ? "CONTANGO" : "BACKWARDATION";
+  const asset = String(assetKey || "BTC");
+  const label = String(assetLabel || "Bitcoin");
+  const pair  = String(assetPair  || "BTC/USD");
+  const dim5  = ASSET_DIMENSIONS[asset] ?? ASSET_DIMENSIONS["BTC"];
 
   const prompt = `You are RAPIDS, an augmentation instrument AI performing dimensional analysis for an operator.
 
-LIVE FIELD DATA — BTC/USD:
+LIVE FIELD DATA — ${pair}:
+- Asset: ${label} (${pair})
 - Spot Price: $${spotPrice}
-- CME Futures: $${futuresPrice}
+- Futures Price: $${futuresPrice}
 - Basis Delta: $${(basisDelta as number)?.toFixed(2)} (${marketStructure})
 - Basis %: ${((futuresBasis as number ?? 0) * 100).toFixed(4)}%
 - 24h Volume: $${((volume as number ?? 0) / 1e9).toFixed(2)}B
 - Open Interest: $${((openInterest as number ?? 0) / 1e9).toFixed(2)}B
-- BTC Dominance: ${(btcDominance as number)?.toFixed(2)}%
-- Spot Spread: $${(spreadSpot as number)?.toFixed(2)}
-- Bid Depth: ${(depthBidsSpot as number)?.toFixed(1)} BTC
+- Spot Spread: $${(spreadSpot as number)?.toFixed(4)}
+- Bid Depth: ${(depthBidsSpot as number)?.toFixed(1)} units
 - Source: ${source}
 
-Compress this field into 10 dimensional readings. Contribution values must sum to exactly 100. Return ONLY valid JSON — no markdown, no explanation, no code fences.
+Compress this ${label} market field into 10 dimensional readings specific to ${label}. Contribution values must sum to exactly 100. Return ONLY valid JSON — no markdown, no explanation, no code fences.
 
 {
   "dimensions": [
-    { "id": "dollar", "name": "Dollar / DXY", "signal": "<10-word signal>", "contribution": <int 5-20>, "direction": "positive|negative|neutral" },
-    { "id": "realyields", "name": "Real Yields", "signal": "<10-word signal>", "contribution": <int 5-20>, "direction": "positive|negative|neutral" },
-    { "id": "instflows", "name": "Institutional Flows", "signal": "<10-word signal>", "contribution": <int 5-20>, "direction": "positive|negative|neutral" },
-    { "id": "futures", "name": "Futures Positioning", "signal": "<10-word signal>", "contribution": <int 5-20>, "direction": "positive|negative|neutral" },
-    { "id": "onchain", "name": "On-Chain Activity", "signal": "<10-word signal>", "contribution": <int 5-15>, "direction": "positive|negative|neutral" },
-    { "id": "risksentiment", "name": "Risk Sentiment", "signal": "<10-word signal>", "contribution": <int 5-15>, "direction": "positive|negative|neutral" },
-    { "id": "commodity", "name": "Commodity Complex", "signal": "<10-word signal>", "contribution": <int 5-20>, "direction": "positive|negative|neutral" },
-    { "id": "geopolitics", "name": "Geopolitics", "signal": "<10-word signal>", "contribution": <int 5-15>, "direction": "positive|negative|neutral" },
-    { "id": "technical", "name": "Technical Structure", "signal": "<10-word signal>", "contribution": <int 8-22>, "direction": "positive|negative|neutral" },
-    { "id": "liquidity", "name": "Liquidity / Depth", "signal": "<10-word signal>", "contribution": <int 5-15>, "direction": "positive|negative|neutral" }
+    { "id": "dollar", "name": "Dollar / DXY", "signal": "<10-word signal about USD impact on ${label}>", "contribution": <int 5-20>, "direction": "positive|negative|neutral" },
+    { "id": "realyields", "name": "Real Yields", "signal": "<10-word signal about real yield impact on ${label}>", "contribution": <int 5-20>, "direction": "positive|negative|neutral" },
+    { "id": "instflows", "name": "Institutional Flows", "signal": "<10-word signal about institutional positioning in ${label}>", "contribution": <int 5-20>, "direction": "positive|negative|neutral" },
+    { "id": "futures", "name": "Futures Positioning", "signal": "<10-word signal about ${label} futures structure>", "contribution": <int 5-20>, "direction": "positive|negative|neutral" },
+    { "id": "${dim5.id}", "name": "${dim5.name}", "signal": "<10-word signal specific to ${label}>", "contribution": <int 5-15>, "direction": "positive|negative|neutral" },
+    { "id": "risksentiment", "name": "Risk Sentiment", "signal": "<10-word signal about risk appetite affecting ${label}>", "contribution": <int 5-15>, "direction": "positive|negative|neutral" },
+    { "id": "commodity", "name": "Commodity Complex", "signal": "<10-word signal about commodity complex and ${label}>", "contribution": <int 5-20>, "direction": "positive|negative|neutral" },
+    { "id": "geopolitics", "name": "Geopolitics", "signal": "<10-word signal about geopolitical impact on ${label}>", "contribution": <int 5-15>, "direction": "positive|negative|neutral" },
+    { "id": "technical", "name": "Technical Structure", "signal": "<10-word signal about ${label} technical pattern>", "contribution": <int 8-22>, "direction": "positive|negative|neutral" },
+    { "id": "liquidity", "name": "Liquidity / Depth", "signal": "<10-word signal about ${label} market depth>", "contribution": <int 5-15>, "direction": "positive|negative|neutral" }
   ],
-  "pattern": "<single declarative sentence describing dominant market structure>",
-  "findings": ["<finding>","<finding>","<finding>","<finding>","<finding>"],
-  "simonSummary": "<2-3 sentence synthesis>",
+  "pattern": "<single declarative sentence describing dominant ${label} market structure>",
+  "findings": ["<data-backed finding about ${label}>","<data-backed finding>","<data-backed finding>","<data-backed finding>","<data-backed finding>"],
+  "simonSummary": "<2-3 sentence synthesis of ${label} dimensions>",
   "rapidsCompression": "10 dimensions → <N> primary drivers → <pattern name>"
 }`;
 
@@ -266,17 +286,29 @@ function buildFallback(body: Record<string, unknown>) {
 
 // POST /gemini/dimensional-trigger — starts background computation, returns immediately
 router.post("/gemini/dimensional-trigger", (req, res) => {
+  const incomingAssetKey = String(req.body.assetKey || "BTC");
+
+  // If asset switched, invalidate cache immediately
+  if (rapidsCache.assetKey && rapidsCache.assetKey !== incomingAssetKey) {
+    rapidsCache.status = "idle";
+    rapidsCache.analysis = null;
+    rapidsCache.computedAt = null;
+    rapidsCache.assetKey = null;
+  }
+
   if (rapidsCache.status === "computing") {
     res.json({ success: true, status: "computing", message: "Already computing" });
     return;
   }
-  // If already ready and fresh (< 90 seconds), serve the cache without re-triggering
+  // If already ready and fresh (< 90 seconds) for the same asset, serve cache
   const age = rapidsCache.computedAt ? Date.now() - rapidsCache.computedAt : Infinity;
-  if (rapidsCache.status === "ready" && age < 90_000) {
+  if (rapidsCache.status === "ready" && age < 90_000 && rapidsCache.assetKey === incomingAssetKey) {
     res.json({ success: true, status: "ready", message: "Cache fresh" });
     return;
   }
+
   rapidsCache.status = "computing";
+  rapidsCache.assetKey = incomingAssetKey;
   rapidsCache.fieldSnapshot = req.body;
 
   // Fire-and-forget background computation
@@ -288,7 +320,6 @@ router.post("/gemini/dimensional-trigger", (req, res) => {
       rapidsCache.computedAt = Date.now();
       rapidsCache.error = null;
     } catch {
-      // Fallback to deterministic analysis
       rapidsCache.analysis = buildFallback(req.body);
       rapidsCache.status = "ready";
       rapidsCache.computedAt = Date.now();
@@ -307,6 +338,7 @@ router.get("/gemini/dimensional-cache", (_req, res) => {
     analysis: rapidsCache.analysis,
     computedAt: rapidsCache.computedAt,
     error: rapidsCache.error,
+    assetKey: rapidsCache.assetKey,
   });
 });
 

@@ -65,14 +65,21 @@ export default function RapidsAperture({ dimensions, loading, rapidsCompression 
   const refRings = [0.25, 0.5, 0.75, 1.0];
 
   return (
-    <div className="flex flex-col items-center justify-center h-full bg-[#07080B] px-4 py-6 relative" id="rapids-aperture">
+    <div className="flex flex-col items-center justify-center h-full bg-[#07080B] px-2 py-4 md:px-4 md:py-6 relative" id="rapids-aperture">
       {/* Title */}
-      <div className="absolute top-4 left-0 right-0 flex items-center justify-center">
+      <div className="absolute top-3 left-0 right-0 flex items-center justify-center">
         <span className="text-[8px] font-mono tracking-[0.3em] text-[#3A4555] uppercase">RAPIDS LENS</span>
       </div>
 
-      <div className="relative" style={{ width: 400, height: 400 }}>
-        <svg width="400" height="400" viewBox="0 0 400 400" id="rapids-svg">
+      {/* Responsive SVG container */}
+      <div className="relative w-full max-w-[360px] md:max-w-[400px] aspect-square">
+        <svg
+          width="100%"
+          height="100%"
+          viewBox="0 0 400 400"
+          id="rapids-svg"
+          preserveAspectRatio="xMidYMid meet"
+        >
           <defs>
             <radialGradient id="bg-grad" cx="50%" cy="50%" r="50%">
               <stop offset="0%" stopColor="#0E1018" />
@@ -92,10 +99,8 @@ export default function RapidsAperture({ dimensions, loading, rapidsCompression 
             </filter>
           </defs>
 
-          {/* Background circle */}
           <circle cx={CX} cy={CY} r={OUTER_R + 20} fill="url(#bg-grad)" />
 
-          {/* Reference rings */}
           {refRings.map((fraction, ri) => {
             const pts = Array.from({ length: N }, (_, i) => {
               const p = polarToCart(CX, CY, fraction * OUTER_R, angle(i));
@@ -112,7 +117,6 @@ export default function RapidsAperture({ dimensions, loading, rapidsCompression 
             );
           })}
 
-          {/* Axes */}
           {Array.from({ length: N }, (_, i) => {
             const outer = polarToCart(CX, CY, OUTER_R, angle(i));
             return (
@@ -126,7 +130,6 @@ export default function RapidsAperture({ dimensions, loading, rapidsCompression 
             );
           })}
 
-          {/* Data polygon */}
           <AnimatePresence>
             {polygonPoints && !loading && (
               <motion.polygon
@@ -145,7 +148,6 @@ export default function RapidsAperture({ dimensions, loading, rapidsCompression 
             )}
           </AnimatePresence>
 
-          {/* Loading aperture animation */}
           {(loading || dimensions.length === 0) && (
             <>
               {refRings.map((fraction, ri) => {
@@ -167,7 +169,6 @@ export default function RapidsAperture({ dimensions, loading, rapidsCompression 
             </>
           )}
 
-          {/* Data point dots on polygon vertices */}
           {!loading && dimensions.map((d, i) => {
             const r = (d.contribution / 100) * OUTER_R;
             const p = polarToCart(CX, CY, r, angle(i));
@@ -184,7 +185,6 @@ export default function RapidsAperture({ dimensions, loading, rapidsCompression 
             );
           })}
 
-          {/* Axis labels */}
           {Array.from({ length: N }, (_, i) => {
             const labelR = OUTER_R + 16;
             const p = polarToCart(CX, CY, labelR, angle(i));
@@ -205,7 +205,6 @@ export default function RapidsAperture({ dimensions, loading, rapidsCompression 
             );
           })}
 
-          {/* Center aperture dot */}
           <circle cx={CX} cy={CY} r="3" fill={mainColor} fillOpacity="0.9" filter="url(#center-glow)" />
           <motion.circle
             cx={CX} cy={CY} r="12"
@@ -218,21 +217,18 @@ export default function RapidsAperture({ dimensions, loading, rapidsCompression 
           />
         </svg>
 
-        {/* Center overlay label */}
+        {/* Center overlay */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           {loading ? (
-            <div className="text-center">
-              <div className="text-[8px] font-mono text-[#E0AF68]/50 tracking-[0.3em] animate-pulse">COMPUTING</div>
-            </div>
+            <div className="text-[8px] font-mono text-[#E0AF68]/50 tracking-[0.3em] animate-pulse">COMPUTING</div>
           ) : dimensions.length === 0 ? (
             <div className="text-[8px] font-mono text-[#3A4555] tracking-[0.3em]">ACQUIRING</div>
           ) : null}
         </div>
       </div>
 
-      {/* Bottom compression label */}
       {rapidsCompression && (
-        <div className="absolute bottom-4 left-0 right-0 flex justify-center">
+        <div className="absolute bottom-3 left-0 right-0 flex justify-center">
           <div className="text-[8px] font-mono text-[#3A4555] tracking-wider text-center max-w-xs px-4 leading-relaxed">
             {rapidsCompression}
           </div>

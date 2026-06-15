@@ -46,6 +46,7 @@ export default function ActionPanel({
 }: ActionPanelProps) {
   const [routes, setRoutes] = useState<Record<string, Route>>({});
   const [selected, setSelected] = useState<string | null>(null);
+  const [mobileTab, setMobileTab] = useState<"queue" | "governance">("queue");
 
   const spot = liveFeed ? parseFloat(liveFeed.coinbaseSpotPrice) : null;
   const future = liveFeed ? parseFloat(liveFeed.cmeFuturePrice) : null;
@@ -63,234 +64,244 @@ export default function ActionPanel({
   const selectedObs = auditRecords.find(a => a.id === selected);
   const selectedRoute = selected ? routes[selected] : undefined;
 
-  return (
-    <div className="flex-1 grid overflow-hidden" style={{ gridTemplateColumns: "1fr 320px" }}>
-
-      {/* LEFT — Decision Queue */}
-      <div className="border-r border-white/[0.04] flex flex-col overflow-hidden">
-
-        {/* Current State bar */}
-        <div className="border-b border-white/[0.04] px-6 py-4 flex items-start justify-between gap-6 shrink-0">
-          <div className="space-y-1 min-w-0">
-            <div className="text-[9px] font-mono tracking-[0.25em] text-[#4A5568] uppercase">Current State</div>
-            {liveFeed ? (
-              <div className="flex items-center gap-3 font-mono flex-wrap">
-                <span className="text-[11px] font-bold text-white">
-                  BTC/USD ${parseFloat(liveFeed.coinbaseSpotPrice).toLocaleString()}
+  const QueuePanel = (
+    <div className="flex flex-col overflow-hidden flex-1">
+      {/* Current State bar */}
+      <div className="border-b border-white/[0.04] px-4 md:px-5 py-3 md:py-4 flex items-start justify-between gap-4 shrink-0">
+        <div className="space-y-1 min-w-0">
+          <div className="text-[9px] font-mono tracking-[0.25em] text-[#4A5568] uppercase">Current State</div>
+          {liveFeed ? (
+            <div className="flex items-center gap-2 font-mono flex-wrap">
+              <span className="text-[11px] font-bold text-white">
+                ${parseFloat(liveFeed.coinbaseSpotPrice).toLocaleString()}
+              </span>
+              {structure && (
+                <span className={`text-[9px] font-bold ${basis! >= 0 ? "text-[#64D2FF]" : "text-rose-400"}`}>
+                  {basis! >= 0 ? "+" : ""}{basis!.toFixed(0)} {structure}
                 </span>
-                {structure && (
-                  <span className={`text-[9px] font-bold ${basis! >= 0 ? "text-[#64D2FF]" : "text-rose-400"}`}>
-                    {basis! >= 0 ? "+" : ""}{basis!.toFixed(0)} {structure}
-                  </span>
-                )}
-                <span className="text-[9px] text-[#4A5568]">·</span>
-                <span className="text-[9px] text-[#6B7280]">{liveFeed.source}</span>
-              </div>
-            ) : (
-              <div className="text-[9px] font-mono text-[#4A5568]">Field acquiring…</div>
-            )}
-            {analysis?.pattern && (
-              <div className="text-[9px] font-mono text-[#6B7280] leading-relaxed max-w-lg">
-                {analysis.pattern}
-              </div>
-            )}
-          </div>
-          <div className="shrink-0 flex items-center gap-4">
+              )}
+              <span className="text-[9px] text-[#4A5568]">·</span>
+              <span className="text-[9px] text-[#6B7280]">{liveFeed.source}</span>
+            </div>
+          ) : (
+            <div className="text-[9px] font-mono text-[#4A5568]">Field acquiring…</div>
+          )}
+          {analysis?.pattern && (
+            <div className="text-[9px] font-mono text-[#6B7280] leading-relaxed max-w-lg">
+              {analysis.pattern}
+            </div>
+          )}
+        </div>
+        {topDimensions.length > 0 && (
+          <div className="shrink-0 hidden sm:flex items-center gap-4">
             {topDimensions.map(d => (
               <div key={d.name} className="text-right">
-                <div className="text-[8.5px] font-mono text-[#4A5568] uppercase tracking-wider">{d.name.split("/")[0].trim()}</div>
+                <div className="text-[8px] font-mono text-[#4A5568] uppercase tracking-wider">{d.name.split("/")[0].trim()}</div>
                 <div className={`text-[10px] font-mono font-bold ${d.contribution > 0 ? "text-emerald-400" : "text-rose-400"}`}>
                   {d.contribution > 0 ? "+" : ""}{d.contribution.toFixed(1)}%
                 </div>
               </div>
             ))}
           </div>
-        </div>
-
-        {/* Queue header */}
-        <div className="px-6 py-3 border-b border-white/[0.04] flex items-center justify-between shrink-0">
-          <div>
-            <div className="text-[9px] font-mono tracking-[0.25em] text-[#4A5568] uppercase mb-0.5">Decision Queue</div>
-            <div className="text-[10.5px] font-mono font-semibold text-white">
-              {auditRecords.length} observation{auditRecords.length !== 1 ? "s" : ""} sealed
-            </div>
-          </div>
-          <button
-            onClick={onFetchAudits}
-            disabled={auditLoading}
-            className="text-[8.5px] font-mono text-[#4A5568] hover:text-white transition-all border border-white/[0.04] px-2 py-1 rounded cursor-pointer"
-          >
-            {auditLoading ? "SYNCING…" : "SYNC"}
-          </button>
-        </div>
-
-        {/* Observation list */}
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-2">
-          {auditRecords.length === 0 ? (
-            <div className="py-20 text-center space-y-3">
-              <div className="text-[10px] font-mono text-[#3A4555]">No observations sealed yet.</div>
-              <div className="text-[9px] font-mono text-[#2A3545]">
-                Return to AUGMENT. Use the operator channel.<br />
-                Seal an observation to begin the governance chain.
-              </div>
-            </div>
-          ) : (
-            auditRecords.map((obs) => {
-              const r = routes[obs.id];
-              const isSelected = selected === obs.id;
-              return (
-                <motion.div
-                  key={obs.id}
-                  layout
-                  onClick={() => setSelected(isSelected ? null : obs.id)}
-                  className={`border rounded-lg p-4 cursor-pointer transition-all ${
-                    isSelected
-                      ? "border-white/[0.12] bg-white/[0.03]"
-                      : "border-white/[0.04] hover:border-white/[0.08]"
-                  }`}
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      {r ? (
-                        <span className={`text-[8px] font-mono font-bold px-1.5 py-0.5 rounded border ${ROUTE_STYLES[r]}`}>
-                          {r}
-                        </span>
-                      ) : (
-                        <span className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded border border-amber-500/20 bg-amber-500/8 text-amber-400">
-                          PENDING
-                        </span>
-                      )}
-                      <span className="text-[9px] font-mono text-[#4A5568]">{obs.id}</span>
-                    </div>
-                    <div className="text-right text-[9px] font-mono text-[#3A4555]">
-                      {new Date(obs.createdAt).toLocaleTimeString()}
-                    </div>
-                  </div>
-
-                  <div className="text-[9.5px] font-mono text-[#8A95A3] leading-relaxed mb-3">
-                    {obs.logs[0] || "No operator note."}
-                  </div>
-
-                  <AnimatePresence>
-                    {isSelected && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="overflow-hidden"
-                      >
-                        <div className="pt-2 border-t border-white/[0.04] space-y-2">
-                          <div className="text-[8.5px] font-mono text-[#4A5568] uppercase tracking-wider">Route this observation</div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            {(["ARCHIVE", "ESCALATE", "INVESTIGATE", "DISMISSED"] as Route[]).map((rt) => (
-                              <button
-                                key={rt}
-                                onClick={(e) => { e.stopPropagation(); route(obs.id, rt); }}
-                                className={`text-[8px] font-mono font-bold px-2 py-1 rounded border cursor-pointer transition-all ${
-                                  r === rt ? ROUTE_STYLES[rt] : "border-white/[0.06] text-[#4A5568] hover:text-white hover:border-white/[0.12]"
-                                }`}
-                              >
-                                → {rt}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </motion.div>
-              );
-            })
-          )}
-        </div>
+        )}
       </div>
 
-      {/* RIGHT — Governance Chain + Impact */}
-      <div className="flex flex-col overflow-hidden">
-
-        {/* Impact preview */}
-        <div className="border-b border-white/[0.04] px-5 py-5 space-y-4 shrink-0">
-          <div className="text-[9px] font-mono tracking-[0.25em] text-[#4A5568] uppercase">Impact</div>
-          {selectedObs && selectedRoute ? (
-            <div className="space-y-2">
-              <div className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded border w-fit ${ROUTE_STYLES[selectedRoute]}`}>
-                {selectedRoute}
-              </div>
-              <div className="space-y-1.5 text-[9px] font-mono text-[#5A6575]">
-                {selectedRoute === "ARCHIVE" && <>
-                  <div>→ Preserved in sovereign ledger</div>
-                  <div>→ Authority chain recorded</div>
-                  <div>→ Operator signature applied</div>
-                </>}
-                {selectedRoute === "ESCALATE" && <>
-                  <div>→ Flagged for senior review</div>
-                  <div>→ Observation elevated in ledger</div>
-                  <div>→ Authority notification queued</div>
-                </>}
-                {selectedRoute === "INVESTIGATE" && <>
-                  <div>→ Queued for deeper analysis</div>
-                  <div>→ Pattern comparison triggered</div>
-                  <div>→ RAPIDS re-evaluation requested</div>
-                </>}
-                {selectedRoute === "DISMISSED" && <>
-                  <div>→ Removed from active queue</div>
-                  <div>→ Retained in archive</div>
-                  <div>→ Operator decision recorded</div>
-                </>}
-              </div>
-            </div>
-          ) : selectedObs ? (
-            <div className="text-[9px] font-mono text-[#3A4555]">
-              Select a route to see impact.
-            </div>
-          ) : (
-            <div className="text-[9px] font-mono text-[#3A4555]">
-              Select an observation to route it.
-            </div>
-          )}
+      {/* Queue header */}
+      <div className="px-4 md:px-5 py-2.5 md:py-3 border-b border-white/[0.04] flex items-center justify-between shrink-0">
+        <div>
+          <div className="text-[9px] font-mono tracking-[0.25em] text-[#4A5568] uppercase mb-0.5">Decision Queue</div>
+          <div className="text-[10px] font-mono font-semibold text-white">
+            {auditRecords.length} observation{auditRecords.length !== 1 ? "s" : ""} sealed
+          </div>
         </div>
+        <button
+          onClick={onFetchAudits}
+          disabled={auditLoading}
+          className="text-[8.5px] font-mono text-[#4A5568] hover:text-white transition-all border border-white/[0.04] px-2 py-1 rounded cursor-pointer"
+        >
+          {auditLoading ? "SYNCING…" : "SYNC"}
+        </button>
+      </div>
 
-        {/* Governance chain */}
-        <div className="border-b border-white/[0.04] px-5 py-5 space-y-3 shrink-0">
-          <div className="text-[9px] font-mono tracking-[0.25em] text-[#4A5568] uppercase">Governance Chain</div>
-          {[
-            { label: "OBSERVATION", desc: "Operator sees" },
-            { label: "AUTHORITY",   desc: "Truth validated" },
-            { label: "FINDING",     desc: "Evidence gathered" },
-            { label: "DECISION",    desc: "Operator decides" },
-            { label: "AUDIT",       desc: "Record sealed" },
-          ].map((step, i, arr) => (
-            <div key={step.label} className="flex items-start gap-3">
-              <div className="flex flex-col items-center shrink-0">
-                <div className="w-1.5 h-1.5 rounded-full bg-[#2A3545] mt-0.5" />
-                {i < arr.length - 1 && <div className="w-px h-5 bg-white/[0.04] mt-1" />}
-              </div>
-              <div>
-                <div className="text-[8.5px] font-mono font-bold text-[#6B7280] tracking-wider">{step.label}</div>
-                <div className="text-[8px] font-mono text-[#3A4555]">{step.desc}</div>
-              </div>
+      {/* List */}
+      <div className="flex-1 overflow-y-auto px-4 md:px-5 py-3 md:py-4 space-y-2">
+        {auditRecords.length === 0 ? (
+          <div className="py-16 text-center space-y-2">
+            <div className="text-[10px] font-mono text-[#3A4555]">No observations sealed yet.</div>
+            <div className="text-[9px] font-mono text-[#2A3545]">
+              Go to AUGMENT → OPERATOR CHANNEL.<br />
+              Seal an observation to begin the governance chain.
             </div>
-          ))}
-        </div>
+          </div>
+        ) : (
+          auditRecords.map((obs) => {
+            const r = routes[obs.id];
+            const isSelected = selected === obs.id;
+            return (
+              <motion.div
+                key={obs.id}
+                layout
+                onClick={() => setSelected(isSelected ? null : obs.id)}
+                className={`border rounded-lg p-3 md:p-4 cursor-pointer transition-all ${
+                  isSelected
+                    ? "border-white/[0.12] bg-white/[0.03]"
+                    : "border-white/[0.04] hover:border-white/[0.08]"
+                }`}
+              >
+                <div className="flex items-start justify-between mb-2 gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {r ? (
+                      <span className={`text-[8px] font-mono font-bold px-1.5 py-0.5 rounded border ${ROUTE_STYLES[r]}`}>{r}</span>
+                    ) : (
+                      <span className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded border border-amber-500/20 bg-amber-500/8 text-amber-400">PENDING</span>
+                    )}
+                    <span className="text-[9px] font-mono text-[#4A5568]">{obs.id}</span>
+                  </div>
+                  <div className="text-right text-[9px] font-mono text-[#3A4555] shrink-0">
+                    {new Date(obs.createdAt).toLocaleTimeString()}
+                  </div>
+                </div>
 
-        {/* Principles */}
-        <div className="px-5 py-5 space-y-3 flex-1 overflow-y-auto">
-          <div className="text-[9px] font-mono tracking-[0.25em] text-[#4A5568] uppercase">Principles</div>
-          {PRINCIPLES.map((p, i) => (
-            <div key={i} className="flex items-start gap-3">
-              <span className="text-[8px] font-mono text-[#2A3545] shrink-0 mt-[1px]">{String(i + 1).padStart(2, "0")}</span>
-              <span className="text-[9px] font-mono text-[#4A5568] leading-relaxed">{p}</span>
-            </div>
-          ))}
+                <div className="text-[9.5px] font-mono text-[#8A95A3] leading-relaxed mb-2">
+                  {obs.logs[0] || "No operator note."}
+                </div>
 
-          <div className="pt-4 border-t border-white/[0.03]">
-            <div className="text-[8px] font-mono text-[#2A3545] leading-relaxed italic">
-              The system does not replace judgement.<br />
-              It augments judgement through structure.
+                <AnimatePresence>
+                  {isSelected && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="pt-2 border-t border-white/[0.04] space-y-2">
+                        <div className="text-[8.5px] font-mono text-[#4A5568] uppercase tracking-wider">Route this observation</div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {(["ARCHIVE", "ESCALATE", "INVESTIGATE", "DISMISSED"] as Route[]).map((rt) => (
+                            <button
+                              key={rt}
+                              onClick={(e) => { e.stopPropagation(); route(obs.id, rt); }}
+                              className={`text-[8px] font-mono font-bold px-2 py-1 rounded border cursor-pointer transition-all ${
+                                r === rt ? ROUTE_STYLES[rt] : "border-white/[0.06] text-[#4A5568] hover:text-white hover:border-white/[0.12]"
+                              }`}
+                            >
+                              → {rt}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+
+  const GovernancePanel = (
+    <div className="flex flex-col overflow-y-auto">
+      {/* Impact */}
+      <div className="border-b border-white/[0.04] px-4 md:px-5 py-4 md:py-5 space-y-3">
+        <div className="text-[9px] font-mono tracking-[0.25em] text-[#4A5568] uppercase">Impact</div>
+        {selectedObs && selectedRoute ? (
+          <div className="space-y-2">
+            <div className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded border w-fit ${ROUTE_STYLES[selectedRoute]}`}>
+              {selectedRoute}
             </div>
+            <div className="space-y-1.5 text-[9px] font-mono text-[#5A6575]">
+              {selectedRoute === "ARCHIVE" && <><div>→ Preserved in sovereign ledger</div><div>→ Authority chain recorded</div><div>→ Operator signature applied</div></>}
+              {selectedRoute === "ESCALATE" && <><div>→ Flagged for senior review</div><div>→ Observation elevated in ledger</div><div>→ Authority notification queued</div></>}
+              {selectedRoute === "INVESTIGATE" && <><div>→ Queued for deeper analysis</div><div>→ Pattern comparison triggered</div><div>→ RAPIDS re-evaluation requested</div></>}
+              {selectedRoute === "DISMISSED" && <><div>→ Removed from active queue</div><div>→ Retained in archive</div><div>→ Operator decision recorded</div></>}
+            </div>
+          </div>
+        ) : (
+          <div className="text-[9px] font-mono text-[#3A4555]">
+            {selectedObs ? "Select a route to see impact." : "Select an observation to route it."}
+          </div>
+        )}
+      </div>
+
+      {/* Governance chain */}
+      <div className="border-b border-white/[0.04] px-4 md:px-5 py-4 md:py-5 space-y-3">
+        <div className="text-[9px] font-mono tracking-[0.25em] text-[#4A5568] uppercase">Governance Chain</div>
+        {[
+          { label: "OBSERVATION", desc: "Operator sees" },
+          { label: "AUTHORITY",   desc: "Truth validated" },
+          { label: "FINDING",     desc: "Evidence gathered" },
+          { label: "DECISION",    desc: "Operator decides" },
+          { label: "AUDIT",       desc: "Record sealed" },
+        ].map((step, i, arr) => (
+          <div key={step.label} className="flex items-start gap-3">
+            <div className="flex flex-col items-center shrink-0">
+              <div className="w-1.5 h-1.5 rounded-full bg-[#2A3545] mt-0.5" />
+              {i < arr.length - 1 && <div className="w-px h-5 bg-white/[0.04] mt-1" />}
+            </div>
+            <div>
+              <div className="text-[8.5px] font-mono font-bold text-[#6B7280] tracking-wider">{step.label}</div>
+              <div className="text-[8px] font-mono text-[#3A4555]">{step.desc}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Principles */}
+      <div className="px-4 md:px-5 py-4 md:py-5 space-y-3">
+        <div className="text-[9px] font-mono tracking-[0.25em] text-[#4A5568] uppercase">Principles</div>
+        {PRINCIPLES.map((p, i) => (
+          <div key={i} className="flex items-start gap-3">
+            <span className="text-[8px] font-mono text-[#2A3545] shrink-0 mt-[1px]">{String(i + 1).padStart(2, "0")}</span>
+            <span className="text-[9px] font-mono text-[#4A5568] leading-relaxed">{p}</span>
+          </div>
+        ))}
+        <div className="pt-3 border-t border-white/[0.03]">
+          <div className="text-[8px] font-mono text-[#2A3545] leading-relaxed italic">
+            The system does not replace judgement.<br />
+            It augments judgement through structure.
           </div>
         </div>
       </div>
     </div>
+  );
+
+  return (
+    <>
+      {/* Desktop: side-by-side */}
+      <div className="hidden md:grid flex-1 overflow-hidden" style={{ gridTemplateColumns: "1fr 300px" }}>
+        <div className="border-r border-white/[0.04] flex flex-col overflow-hidden">
+          {QueuePanel}
+        </div>
+        <div className="flex flex-col overflow-y-auto">
+          {GovernancePanel}
+        </div>
+      </div>
+
+      {/* Mobile: tabbed */}
+      <div className="md:hidden flex-1 flex flex-col overflow-hidden">
+        {/* Tab strip */}
+        <div className="flex border-b border-white/[0.04] shrink-0">
+          {([["queue", "DECISIONS"], ["governance", "GOVERNANCE"]] as [typeof mobileTab, string][]).map(([id, label]) => (
+            <button
+              key={id}
+              onClick={() => setMobileTab(id)}
+              className={`flex-1 py-2.5 text-[9px] font-mono font-bold tracking-[0.2em] cursor-pointer transition-all border-b-2 ${
+                mobileTab === id ? "text-white border-[#E0AF68]" : "text-[#3A4555] border-transparent hover:text-[#6B7280]"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Panel */}
+        {mobileTab === "queue"
+          ? <div className="flex-1 flex flex-col overflow-hidden">{QueuePanel}</div>
+          : <div className="flex-1 overflow-y-auto">{GovernancePanel}</div>
+        }
+      </div>
+    </>
   );
 }
