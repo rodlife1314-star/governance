@@ -41,9 +41,10 @@ export default function App() {
   const [feedLoading, setFeedLoading] = useState(false);
   const feedLoadingRef = useRef(false);
 
-  // Dimensional analysis
+  // Dimensional analysis — background cache + poll pattern
   const [analysis, setAnalysis] = useState<DimensionalAnalysis | null>(null);
   const [analysisLoading, setAnalysisLoading] = useState(false);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Operator channel
   const [sealing, setSealing] = useState(false);
@@ -73,12 +74,59 @@ export default function App() {
     finally { feedLoadingRef.current = false; setFeedLoading(false); }
   }, []);
 
-  const fetchDimensionalAnalysis = useCallback(async (feed: LiveFeedData) => {
+  const stopPolling = useCallback(() => {
+    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+  }, []);
+
+  const startPolling = useCallback(() => {
+    stopPolling();
+    pollRef.current = setInterval(async () => {
+      try {
+        const res = await fetch(getAbsoluteUrl("/api/gemini/dimensional-cache"));
+        const data = await res.json();
+        if (data.status === "ready" && data.analysis) {
+          const a = data.analysis as Record<string, unknown>;
+          setAnalysis({
+            dimensions: (a.dimensions as DimensionalAnalysis["dimensions"]) || [],
+            pattern: (a.pattern as string) || "",
+            findings: (a.findings as string[]) || [],
+            simonSummary: (a.simonSummary as string) || "",
+            rapidsCompression: (a.rapidsCompression as string) || "",
+          });
+          setAnalysisLoading(false);
+          stopPolling();
+        }
+      } catch { /* keep polling */ }
+    }, 2000);
+  }, [stopPolling]);
+
+  const applyAnalysis = useCallback((a: Record<string, unknown>) => {
+    setAnalysis({
+      dimensions: (a.dimensions as DimensionalAnalysis["dimensions"]) || [],
+      pattern: (a.pattern as string) || "",
+      findings: (a.findings as string[]) || [],
+      simonSummary: (a.simonSummary as string) || "",
+      rapidsCompression: (a.rapidsCompression as string) || "",
+    });
+    setAnalysisLoading(false);
+  }, []);
+
+  const triggerAnalysis = useCallback(async (feed: LiveFeedData) => {
+    // Check cache first — if ready and fresh, use it immediately
+    try {
+      const cacheRes = await fetch(getAbsoluteUrl("/api/gemini/dimensional-cache"));
+      const cacheData = await cacheRes.json();
+      if (cacheData.status === "ready" && cacheData.analysis) {
+        applyAnalysis(cacheData.analysis as Record<string, unknown>);
+        return;
+      }
+    } catch { /* fall through to trigger */ }
+
     setAnalysisLoading(true);
     try {
       const spot = parseFloat(feed.coinbaseSpotPrice);
       const future = parseFloat(feed.cmeFuturePrice);
-      const res = await fetch(getAbsoluteUrl("/api/gemini/dimensional-analysis"), {
+      const triggerRes = await fetch(getAbsoluteUrl("/api/gemini/dimensional-trigger"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -94,19 +142,16 @@ export default function App() {
           source: feed.source,
         }),
       });
-      const data = await res.json();
-      if (data.success) {
-        setAnalysis({
-          dimensions: data.dimensions || [],
-          pattern: data.pattern || "",
-          findings: data.findings || [],
-          simonSummary: data.simonSummary || "",
-          rapidsCompression: data.rapidsCompression || "",
-        });
+      const triggerData = await triggerRes.json();
+      // If trigger returned "ready" (cache was fresh), grab and apply it
+      if (triggerData.status === "ready") {
+        const cacheRes = await fetch(getAbsoluteUrl("/api/gemini/dimensional-cache"));
+        const cacheData = await cacheRes.json();
+        if (cacheData.analysis) { applyAnalysis(cacheData.analysis as Record<string, unknown>); return; }
       }
-    } catch { /* keep last analysis */ }
-    finally { setAnalysisLoading(false); }
-  }, []);
+      startPolling();
+    } catch { setAnalysisLoading(false); }
+  }, [startPolling, applyAnalysis]);
 
   const fetchAudits = useCallback(async () => {
     setAuditLoading(true);
@@ -166,8 +211,11 @@ export default function App() {
 
   // Trigger dimensional analysis when live feed arrives
   useEffect(() => {
-    if (liveFeed && !analysisLoading) fetchDimensionalAnalysis(liveFeed);
+    if (liveFeed && !analysisLoading) triggerAnalysis(liveFeed);
   }, [liveFeed]);
+
+  // Cleanup polling on unmount
+  useEffect(() => () => stopPolling(), []);
 
   // Archive mode — load audits
   useEffect(() => {
@@ -191,7 +239,7 @@ export default function App() {
         liveFeed={liveFeed}
         feedLoading={feedLoading}
         analysisLoading={analysisLoading}
-        onRefresh={() => { fetchLiveFeed(); if (liveFeed) fetchDimensionalAnalysis(liveFeed); }}
+        onRefresh={() => { fetchLiveFeed(); if (liveFeed) triggerAnalysis(liveFeed); }}
         mode={mode}
         setMode={setMode}
       />

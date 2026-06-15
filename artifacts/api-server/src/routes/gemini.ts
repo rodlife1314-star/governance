@@ -170,6 +170,147 @@ Calculate optimal PID gains for sub-microsecond HFT execution. Return ONLY valid
   }
 });
 
+// ── RAPIDS Background Cache ────────────────────────────────────────────────
+// Keeps the latest dimensional analysis in memory.
+// Client posts to /trigger (returns immediately), then polls /cache.
+// This avoids long-running browser connections that get aborted by the proxy.
+
+interface RapidsCache {
+  status: "idle" | "computing" | "ready" | "error";
+  analysis: Record<string, unknown> | null;
+  computedAt: number | null;
+  error: string | null;
+  fieldSnapshot: Record<string, unknown> | null;
+}
+
+const rapidsCache: RapidsCache = {
+  status: "idle",
+  analysis: null,
+  computedAt: null,
+  error: null,
+  fieldSnapshot: null,
+};
+
+async function runDimensionalAnalysis(body: Record<string, unknown>) {
+  const { spotPrice, futuresPrice, basisDelta, volume, openInterest, btcDominance, spreadSpot, depthBidsSpot, futuresBasis, source } = body as Record<string, number & string>;
+  const marketStructure = (basisDelta as number) >= 0 ? "CONTANGO" : "BACKWARDATION";
+
+  const prompt = `You are RAPIDS, an augmentation instrument AI performing dimensional analysis for an operator.
+
+LIVE FIELD DATA — BTC/USD:
+- Spot Price: $${spotPrice}
+- CME Futures: $${futuresPrice}
+- Basis Delta: $${(basisDelta as number)?.toFixed(2)} (${marketStructure})
+- Basis %: ${((futuresBasis as number ?? 0) * 100).toFixed(4)}%
+- 24h Volume: $${((volume as number ?? 0) / 1e9).toFixed(2)}B
+- Open Interest: $${((openInterest as number ?? 0) / 1e9).toFixed(2)}B
+- BTC Dominance: ${(btcDominance as number)?.toFixed(2)}%
+- Spot Spread: $${(spreadSpot as number)?.toFixed(2)}
+- Bid Depth: ${(depthBidsSpot as number)?.toFixed(1)} BTC
+- Source: ${source}
+
+Compress this field into 10 dimensional readings. Contribution values must sum to exactly 100. Return ONLY valid JSON — no markdown, no explanation, no code fences.
+
+{
+  "dimensions": [
+    { "id": "dollar", "name": "Dollar / DXY", "signal": "<10-word signal>", "contribution": <int 5-20>, "direction": "positive|negative|neutral" },
+    { "id": "realyields", "name": "Real Yields", "signal": "<10-word signal>", "contribution": <int 5-20>, "direction": "positive|negative|neutral" },
+    { "id": "instflows", "name": "Institutional Flows", "signal": "<10-word signal>", "contribution": <int 5-20>, "direction": "positive|negative|neutral" },
+    { "id": "futures", "name": "Futures Positioning", "signal": "<10-word signal>", "contribution": <int 5-20>, "direction": "positive|negative|neutral" },
+    { "id": "onchain", "name": "On-Chain Activity", "signal": "<10-word signal>", "contribution": <int 5-15>, "direction": "positive|negative|neutral" },
+    { "id": "risksentiment", "name": "Risk Sentiment", "signal": "<10-word signal>", "contribution": <int 5-15>, "direction": "positive|negative|neutral" },
+    { "id": "commodity", "name": "Commodity Complex", "signal": "<10-word signal>", "contribution": <int 5-20>, "direction": "positive|negative|neutral" },
+    { "id": "geopolitics", "name": "Geopolitics", "signal": "<10-word signal>", "contribution": <int 5-15>, "direction": "positive|negative|neutral" },
+    { "id": "technical", "name": "Technical Structure", "signal": "<10-word signal>", "contribution": <int 8-22>, "direction": "positive|negative|neutral" },
+    { "id": "liquidity", "name": "Liquidity / Depth", "signal": "<10-word signal>", "contribution": <int 5-15>, "direction": "positive|negative|neutral" }
+  ],
+  "pattern": "<single declarative sentence describing dominant market structure>",
+  "findings": ["<finding>","<finding>","<finding>","<finding>","<finding>"],
+  "simonSummary": "<2-3 sentence synthesis>",
+  "rapidsCompression": "10 dimensions → <N> primary drivers → <pattern name>"
+}`;
+
+  const raw = await callGemini(prompt, "You are RAPIDS. Return only valid JSON. No markdown fences. No explanation.");
+  const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+  return JSON.parse(cleaned);
+}
+
+function buildFallback(body: Record<string, unknown>) {
+  const { basisDelta, volume, openInterest, btcDominance, depthBidsSpot } = body as Record<string, number>;
+  const marketStructure = basisDelta >= 0 ? "CONTANGO" : "BACKWARDATION";
+  return {
+    dimensions: [
+      { id: "dollar", name: "Dollar / DXY", signal: "DXY correlating inversely with BTC pressure", contribution: 12, direction: "positive" },
+      { id: "realyields", name: "Real Yields", signal: "Real yield environment supporting risk assets", contribution: 8, direction: "positive" },
+      { id: "instflows", name: "Institutional Flows", signal: "CME open interest elevated, institutional engagement", contribution: 10, direction: "positive" },
+      { id: "futures", name: "Futures Positioning", signal: `${marketStructure} basis — ${basisDelta >= 0 ? "healthy premium" : "discount pressure"}`, contribution: 12, direction: basisDelta >= 0 ? "positive" : "negative" },
+      { id: "onchain", name: "On-Chain Activity", signal: "Volume consistent with trend continuation", contribution: 9, direction: "neutral" },
+      { id: "risksentiment", name: "Risk Sentiment", signal: "Market risk appetite moderately elevated", contribution: 7, direction: "neutral" },
+      { id: "commodity", name: "Commodity Complex", signal: "Commodity complex correlated macro uplift", contribution: 13, direction: "positive" },
+      { id: "geopolitics", name: "Geopolitics", signal: "Geopolitical backdrop broadly neutral", contribution: 8, direction: "neutral" },
+      { id: "technical", name: "Technical Structure", signal: "Price structure maintaining upward trajectory", contribution: 14, direction: "positive" },
+      { id: "liquidity", name: "Liquidity / Depth", signal: "Order book depth adequate, spreads contained", contribution: 7, direction: "positive" },
+    ],
+    pattern: "Multi-dimensional constructive bias — technical and macro dimensions aligned",
+    findings: [
+      `Futures basis ${basisDelta >= 0 ? "positive" : "negative"} at $${Math.abs(basisDelta ?? 0).toFixed(0)} — ${marketStructure}`,
+      `Open interest $${((openInterest ?? 0) / 1e9).toFixed(1)}B signals institutional positioning`,
+      `BTC dominance ${btcDominance?.toFixed(1)}% — capital concentration in BTC layer`,
+      `24h volume $${((volume ?? 0) / 1e9).toFixed(1)}B — within normal distribution`,
+      `Bid-side depth ${depthBidsSpot?.toFixed(0)} BTC — adequate liquidity for current range`,
+    ],
+    simonSummary: `10 dimensions compressed to 3 primary drivers: Technical Structure, Futures Positioning, Institutional Flows. ${marketStructure} basis confirms constructive near-term bias. Operator sovereignty: verify against field observation before committing.`,
+    rapidsCompression: `10 dimensions → 3 primary drivers → ${marketStructure} continuation`,
+  };
+}
+
+// POST /gemini/dimensional-trigger — starts background computation, returns immediately
+router.post("/gemini/dimensional-trigger", (req, res) => {
+  if (rapidsCache.status === "computing") {
+    res.json({ success: true, status: "computing", message: "Already computing" });
+    return;
+  }
+  // If already ready and fresh (< 90 seconds), serve the cache without re-triggering
+  const age = rapidsCache.computedAt ? Date.now() - rapidsCache.computedAt : Infinity;
+  if (rapidsCache.status === "ready" && age < 90_000) {
+    res.json({ success: true, status: "ready", message: "Cache fresh" });
+    return;
+  }
+  rapidsCache.status = "computing";
+  rapidsCache.fieldSnapshot = req.body;
+
+  // Fire-and-forget background computation
+  (async () => {
+    try {
+      const result = await runDimensionalAnalysis(req.body);
+      rapidsCache.analysis = result;
+      rapidsCache.status = "ready";
+      rapidsCache.computedAt = Date.now();
+      rapidsCache.error = null;
+    } catch {
+      // Fallback to deterministic analysis
+      rapidsCache.analysis = buildFallback(req.body);
+      rapidsCache.status = "ready";
+      rapidsCache.computedAt = Date.now();
+      rapidsCache.error = "Gemini unavailable — fallback applied";
+    }
+  })();
+
+  res.json({ success: true, status: "computing" });
+});
+
+// GET /gemini/dimensional-cache — returns current cache state (always fast)
+router.get("/gemini/dimensional-cache", (_req, res) => {
+  res.json({
+    success: true,
+    status: rapidsCache.status,
+    analysis: rapidsCache.analysis,
+    computedAt: rapidsCache.computedAt,
+    error: rapidsCache.error,
+  });
+});
+
+// POST /gemini/dimensional-analysis — legacy long-running endpoint (kept for curl testing)
 router.post("/gemini/dimensional-analysis", async (req, res) => {
   try {
     const { spotPrice, futuresPrice, basisDelta, volume, openInterest, btcDominance, spreadSpot, depthBidsSpot, futuresBasis, source } = req.body;

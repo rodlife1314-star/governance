@@ -1,3 +1,5 @@
 - [Sovereign route prefix fix](sovereign-route-prefix.md) — routes registered as `/api/sovereign/...` inside a router already mounted at `/api` create double-prefix 404s; use `/sovereign/...` inside the router.
 - [esbuild external @google pattern](esbuild-google-external.md) — `@google/*` in esbuild external list catches `@google/genai`; narrow to `@google-cloud/*` so Gemini SDK bundles inline.
 - [pathfinder getAbsoluteUrl API routing](pathfinder-api-url.md) — `getAbsoluteUrl` prepends BASE_URL to all paths; `/api/` paths must bypass the base prefix or they route to `/pathfinder/api/...` which 404s.
+- [RAPIDS trigger-and-poll pattern](rapids-trigger-poll.md) — long-running Gemini calls (~17s) are aborted by Replit iframe proxy at ~3.5s; use server-side background cache + fast polling instead.
+- [RAPIDS cache freshness guard](rapids-trigger-poll.md) — trigger endpoint must guard "ready" status within 90s window or HMR remounts reset cache to "computing" on every render cycle.
