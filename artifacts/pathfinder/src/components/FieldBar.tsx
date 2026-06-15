@@ -7,14 +7,14 @@ interface FieldBarProps {
   feedLoading: boolean;
   analysisLoading: boolean;
   onRefresh: () => void;
-  mode: "augment" | "archive" | "code";
-  setMode: (m: "augment" | "archive" | "code") => void;
+  mode: "augment" | "archive" | "action";
+  setMode: (m: "augment" | "archive" | "action") => void;
 }
 
-const MODES: { id: "augment" | "archive" | "code"; label: string }[] = [
+const MODES: { id: "augment" | "archive" | "action"; label: string }[] = [
   { id: "augment", label: "AUGMENT" },
   { id: "archive", label: "ARCHIVE" },
-  { id: "code", label: "CODE" },
+  { id: "action", label: "ACTION" },
 ];
 
 export default function FieldBar({

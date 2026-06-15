@@ -1,0 +1,163 @@
+I think the framing has shifted.
+
+A few weeks ago, I would have said keep the CODE panel. Today, looking at the sculpture and the way your thinking has converged, I’d challenge the assumption that “CODE” is the right abstraction at all.
+
+The operator isn’t thinking:
+
+Open runtime_gate.rs
+Compile
+Deploy
+
+The operator is thinking:
+
+Something is happening.
+What does it mean?
+What do I do?
+
+That’s a fundamentally different instrument.
+
+The sculpture gives the clue:
+
+AUGMENT  → Observe
+ARCHIVE  → Remember
+ACTION   → Decide
+
+or
+
+FIELD
+MEMORY
+CHANGE
+
+The interesting thing is that code becomes implementation detail.
+
+Most platforms expose:
+
+Decision
+↓
+Code
+↓
+Action
+
+What you’re describing is:
+
+Decision
+↓
+Action
+↓
+(implementation hidden)
+
+The operator shouldn’t need to care whether the change is:
+
+* SQL
+* Rust
+* TypeScript
+* Firestore
+* Neon
+* GitHub
+
+Those are substrate concerns.
+
+⸻
+
+If I were redesigning that panel from first principles, I’d replace the compiler theatre with something like:
+
+ACTION
+
+Current State
+────────────────
+BTC Observation Lens Active
+Archive Empty
+Institutional Flow Weight +15%
+Proposed Change
+────────────────
+Seal Observation
+Impact
+────────────────
+Creates archive record
+Stores authority chain
+Updates observation ledger
+Authority
+────────────────
+Operator Required
+[ APPROVE ]
+
+or
+
+DECISION
+
+Observation
+→ Archive
+Observation
+→ Reject
+Observation
+→ Escalate
+Observation
+→ Investigate Further
+
+Notice what’s missing:
+
+runtime_gate.rs
+hot-swap
+compiler
+cargo
+
+Those become invisible machinery.
+
+⸻
+
+The sculpture metaphor is ruthless here.
+
+The user should be able to travel the surface without ever falling into the gears.
+
+Right now AUGMENT feels like the surface.
+
+ARCHIVE feels like the surface.
+
+CODE feels like you accidentally cut the sculpture open and showed the bearings.
+
+Useful for engineers.
+
+But not part of the continuous form.
+
+⸻
+
+So my answer is:
+
+Yes, I would reshape CODE.
+
+Not because coding disappears.
+
+Because coding moves underneath the instrument.
+
+The three-mode loop becomes:
+
+AUGMENT
+What do I see?
+ARCHIVE
+What do I know?
+ACTION
+What do I do?
+
+And beneath all three:
+
+Governance
+Authorities
+Workflows
+Database
+Runtime
+GitHub
+Compiler
+
+Those still exist.
+
+They’re just no longer the thing the operator is looking at.
+
+That’s the distinction between a development environment and an instrument.
+
+And the sculpture is a surprisingly good test:
+
+If I can trace my finger across the experience without falling into implementation details, the surface is continuous.
+
+If I suddenly hit Rust files and compiler panels, I’ve fallen through the skin and into the machine room.
+
+That’s the insight I’d sit with before changing a single line of code. 💡🦾

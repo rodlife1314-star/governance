@@ -1,8 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getAbsoluteUrl } from "./utils";
-import { INITIAL_RUST_FILES } from "./data";
-import { RustFile, CompilationReport } from "./types";
 import { LiveFeedData, DimensionalAnalysis } from "./augment-types";
 
 import FieldBar from "./components/FieldBar";
@@ -10,12 +8,9 @@ import DimensionStack from "./components/DimensionStack";
 import RapidsAperture from "./components/RapidsAperture";
 import SimonPanel from "./components/SimonPanel";
 import OperatorChannel from "./components/OperatorChannel";
+import ActionPanel from "./components/ActionPanel";
 
-import Sidebar from "./components/Sidebar";
-import CodeWorkspace from "./components/CodeWorkspace";
-import CompilerTerminal from "./components/CompilerTerminal";
-
-type Mode = "augment" | "archive" | "code";
+type Mode = "augment" | "archive" | "action";
 
 interface AuditRecord {
   id: string;
@@ -50,16 +45,10 @@ export default function App() {
   const [sealing, setSealing] = useState(false);
   const [sealedFlash, setSealedFlash] = useState(false);
 
-  // Archive mode
+  // Archive + Action mode share audit records
   const [auditRecords, setAuditRecords] = useState<AuditRecord[]>([]);
   const [auditLoading, setAuditLoading] = useState(false);
   const [auditFilter, setAuditFilter] = useState<"ALL" | "APPROVED" | "REJECTED">("ALL");
-
-  // Code mode
-  const [rustFiles, setRustFiles] = useState<RustFile[]>(INITIAL_RUST_FILES);
-  const [selectedFile, setSelectedFile] = useState<RustFile>(INITIAL_RUST_FILES[0]);
-  const [isCompiling, setIsCompiling] = useState(false);
-  const [compiledFileName, setCompiledFileName] = useState("");
 
   const fetchLiveFeed = useCallback(async () => {
     if (feedLoadingRef.current) return;
@@ -112,7 +101,6 @@ export default function App() {
   }, []);
 
   const triggerAnalysis = useCallback(async (feed: LiveFeedData) => {
-    // Check cache first — if ready and fresh, use it immediately
     try {
       const cacheRes = await fetch(getAbsoluteUrl("/api/gemini/dimensional-cache"));
       const cacheData = await cacheRes.json();
@@ -143,7 +131,6 @@ export default function App() {
         }),
       });
       const triggerData = await triggerRes.json();
-      // If trigger returned "ready" (cache was fresh), grab and apply it
       if (triggerData.status === "ready") {
         const cacheRes = await fetch(getAbsoluteUrl("/api/gemini/dimensional-cache"));
         const cacheData = await cacheRes.json();
@@ -194,17 +181,10 @@ export default function App() {
       });
       setSealedFlash(true);
       setTimeout(() => setSealedFlash(false), 2500);
+      // Refresh audit records after sealing
+      fetchAudits();
     } catch {} finally { setSealing(false); }
-  }, [liveFeed, analysis, sealing]);
-
-  const handleSaveCodeLocal = useCallback((newCode: string) => {
-    setRustFiles((prev) => prev.map((f) => f.path === selectedFile.path ? { ...f, code: newCode } : f));
-    setSelectedFile((prev) => ({ ...prev, code: newCode }));
-  }, [selectedFile.path]);
-
-  const handleRecompiled = useCallback((_report: CompilationReport) => {
-    setCompiledFileName(selectedFile.name);
-  }, [selectedFile.name]);
+  }, [liveFeed, analysis, sealing, fetchAudits]);
 
   // Initial load
   useEffect(() => { fetchLiveFeed(); }, []);
@@ -217,9 +197,9 @@ export default function App() {
   // Cleanup polling on unmount
   useEffect(() => () => stopPolling(), []);
 
-  // Archive mode — load audits
+  // Load audits when entering archive or action mode
   useEffect(() => {
-    if (mode === "archive") fetchAudits();
+    if (mode === "archive" || mode === "action") fetchAudits();
   }, [mode]);
 
   // Auto-refresh feed every 30s
@@ -244,8 +224,8 @@ export default function App() {
         setMode={setMode}
       />
 
-      {/* AUGMENT MODE — the instrument */}
       <AnimatePresence mode="wait">
+        {/* AUGMENT — the instrument */}
         {mode === "augment" && (
           <motion.div
             key="augment"
@@ -254,23 +234,18 @@ export default function App() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.25 }}
             className="flex-1 grid overflow-hidden"
-            style={{ gridTemplateColumns: "360px 1fr 340px", gridTemplateRows: "1fr" }}
+            style={{ gridTemplateColumns: "360px 1fr 340px" }}
           >
-            {/* LEFT — Dimensions */}
             <DimensionStack
               dimensions={analysis?.dimensions || []}
               loading={analysisLoading}
               rapidsCompression={analysis?.rapidsCompression || ""}
             />
-
-            {/* CENTER — RAPIDS Aperture */}
             <RapidsAperture
               dimensions={analysis?.dimensions || []}
               loading={analysisLoading}
               rapidsCompression={analysis?.rapidsCompression || ""}
             />
-
-            {/* RIGHT — SIMON */}
             <SimonPanel
               pattern={analysis?.pattern || ""}
               findings={analysis?.findings || []}
@@ -280,7 +255,7 @@ export default function App() {
           </motion.div>
         )}
 
-        {/* ARCHIVE MODE — sovereign audit ledger */}
+        {/* ARCHIVE — sovereign observation ledger */}
         {mode === "archive" && (
           <motion.div
             key="archive"
@@ -338,45 +313,29 @@ export default function App() {
           </motion.div>
         )}
 
-        {/* CODE MODE — Rust workspace */}
-        {mode === "code" && (
+        {/* ACTION — operator decision surface */}
+        {mode === "action" && (
           <motion.div
-            key="code"
+            key="action"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.25 }}
             className="flex-1 flex overflow-hidden"
           >
-            <div className="w-60 shrink-0 border-r border-white/[0.04]">
-              <Sidebar
-                files={rustFiles}
-                selectedFile={selectedFile}
-                onSelectFile={setSelectedFile}
-                compiledFileName={compiledFileName}
-              />
-            </div>
-            <div className="flex-1 grid overflow-hidden" style={{ gridTemplateColumns: "1fr 380px" }}>
-              <CodeWorkspace
-                selectedFile={selectedFile}
-                onSaveCodeLocal={handleSaveCodeLocal}
-                isCompiling={isCompiling}
-              />
-              <div className="border-l border-white/[0.04]">
-                <CompilerTerminal
-                  onRecompiled={handleRecompiled}
-                  isCompiling={isCompiling}
-                  setIsCompiling={setIsCompiling}
-                  selectedFileName={selectedFile.name}
-                />
-              </div>
-            </div>
+            <ActionPanel
+              liveFeed={liveFeed}
+              analysis={analysis}
+              auditRecords={auditRecords}
+              auditLoading={auditLoading}
+              onFetchAudits={fetchAudits}
+            />
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* OPERATOR CHANNEL — always visible in augment mode */}
-      {mode === "augment" && (
+      {/* OPERATOR CHANNEL — visible in augment and action modes */}
+      {(mode === "augment" || mode === "action") && (
         <OperatorChannel
           liveFeed={liveFeed}
           pattern={analysis?.pattern || ""}
