@@ -16,7 +16,3 @@ the three modes without encountering implementation details.
 - Machine room belongs under the surface (governance, workflows, runtime), not in the mode switcher.
 - New modes should answer an operator question: "What do I see?", "What do I know?", "What do I do?"
 
-## Decisions made
-- ACTION panel: Current State (live field + RAPIDS) / Decision Queue (sealed observations with routing) / Governance Chain / Principles.
-- OPERATOR CHANNEL is visible in both AUGMENT and ACTION modes (allows sealing from the decision surface).
-- Routing states (ARCHIVE, ESCALATE, INVESTIGATE, DISMISSED) are local UI state — no separate API endpoint needed.
