@@ -6,10 +6,15 @@ export interface DimensionEntry {
   direction: "positive" | "negative" | "neutral";
 }
 
+export interface Finding {
+  dimensionId: string;
+  text: string;
+}
+
 export interface DimensionalAnalysis {
   dimensions: DimensionEntry[];
   pattern: string;
-  findings: string[];
+  findings: Finding[];
   simonSummary: string;
   rapidsCompression: string;
 }

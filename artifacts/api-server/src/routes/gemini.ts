@@ -288,7 +288,13 @@ Compress this ${label} market field into 10 dimensional readings. Contribution v
     { "id": "liquidity", "name": "${liquidityName}", "signal": "<signal grounded in ${liquidityName} authority feed value>", "contribution": <int 5-15>, "direction": "positive|negative|neutral" }
   ],
   "pattern": "<single declarative sentence describing dominant ${label} market structure, referencing real feed values>",
-  "findings": ["<finding citing real authority feed value relevant to ${label}>","<finding citing real feed>","<finding citing real feed>","<finding citing real feed>","<finding citing real feed>"],
+  "findings": [
+    { "dimensionId": "<one of: dollar|realyields|instflows|futures|onchain|risksentiment|commodity|geopolitics|technical|liquidity>", "text": "<finding anchored to that dimension's authority feed value — ${label}-specific>" },
+    { "dimensionId": "<dimension id>", "text": "<finding anchored to that dimension's authority feed value>" },
+    { "dimensionId": "<dimension id>", "text": "<finding anchored to that dimension's authority feed value>" },
+    { "dimensionId": "<dimension id>", "text": "<finding anchored to that dimension's authority feed value>" },
+    { "dimensionId": "<dimension id>", "text": "<finding anchored to that dimension's authority feed value>" }
+  ],
   "simonSummary": "<2-3 sentence synthesis citing specific real feed values — all analysis must be ${label}-specific>",
   "rapidsCompression": "10 dimensions → <N> primary drivers → <pattern name>"
 }`;
@@ -316,11 +322,11 @@ function buildFallback(body: Record<string, unknown>) {
     ],
     pattern: "Gemini unavailable — authority feeds degraded — operator field observation required",
     findings: [
-      `Futures basis ${basisDelta >= 0 ? "positive" : "negative"} $${Math.abs(basisDelta ?? 0).toFixed(0)} — ${marketStructure}`,
-      `Field OI $${((openInterest ?? 0) / 1e9).toFixed(1)}B — Binance authority feed degraded`,
-      `BTC dominance ${btcDominance?.toFixed(1) ?? "?"}% — field snapshot only`,
-      `24h volume $${((volume ?? 0) / 1e9).toFixed(1)}B — field snapshot only`,
-      `Bid depth ${depthBidsSpot?.toFixed(0) ?? "?"} units — Coinbase authority feed degraded`,
+      { dimensionId: "futures",      text: `Futures basis ${basisDelta >= 0 ? "positive" : "negative"} $${Math.abs(basisDelta ?? 0).toFixed(0)} — ${marketStructure}` },
+      { dimensionId: "instflows",    text: `Field OI $${((openInterest ?? 0) / 1e9).toFixed(1)}B — authority feed degraded` },
+      { dimensionId: "technical",    text: `Spot $${(body.spotPrice as number | undefined) ?? "??"} — QQQ feed degraded, technical read unavailable` },
+      { dimensionId: "commodity",    text: `Volume $${((volume ?? 0) / 1e9).toFixed(1)}B — WTI commodity feed degraded` },
+      { dimensionId: "liquidity",    text: `Bid depth ${depthBidsSpot?.toFixed(0) ?? "?"} units — liquidity authority feed degraded` },
     ],
     simonSummary: `RAPIDS engine unavailable. Authority feeds may be degraded. Field data preserved for operator review. Do not treat any dimension as authoritative — verify against direct market observation before committing.`,
     rapidsCompression: `10 dimensions → authority feeds degraded → operator field assessment required`,

@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Lock, CheckCircle } from "lucide-react";
-import { LiveFeedData } from "../augment-types";
+import { LiveFeedData, Finding } from "../augment-types";
 
 interface OperatorChannelProps {
   liveFeed: LiveFeedData | null;
   pattern: string;
-  findings: string[];
+  findings: Finding[];
   onSealObservation: (text: string) => Promise<void>;
   sealing: boolean;
   sealed: boolean;

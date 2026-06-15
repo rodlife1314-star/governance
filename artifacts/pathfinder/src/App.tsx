@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getAbsoluteUrl } from "./utils";
-import { LiveFeedData, DimensionalAnalysis, FeedRecord } from "./augment-types";
+import { LiveFeedData, DimensionalAnalysis, FeedRecord, Finding } from "./augment-types";
 import { AssetId, ASSETS, getAsset, generateMockFeed } from "./assets";
 
 import FieldBar from "./components/FieldBar";
@@ -68,7 +68,7 @@ export default function App() {
     setAnalysis({
       dimensions: (a.dimensions as DimensionalAnalysis["dimensions"]) || [],
       pattern: (a.pattern as string) || "",
-      findings: (a.findings as string[]) || [],
+      findings: (a.findings as Finding[]) || [],
       simonSummary: (a.simonSummary as string) || "",
       rapidsCompression: (a.rapidsCompression as string) || "",
     });
@@ -339,6 +339,7 @@ export default function App() {
                 findings={analysis?.findings || []}
                 simonSummary={analysis?.simonSummary || ""}
                 loading={analysisLoading}
+                dimensions={analysis?.dimensions || []}
               />
             </div>
 
@@ -365,6 +366,7 @@ export default function App() {
                   findings={analysis?.findings || []}
                   simonSummary={analysis?.simonSummary || ""}
                   loading={analysisLoading}
+                  dimensions={analysis?.dimensions || []}
                 />
               )}
             </div>
