@@ -29,6 +29,7 @@ Instructions:
 6. Identify the dominant pattern — one precise declarative sentence
 7. Generate exactly 5 findings, each anchored to a different dimension
 8. Suggest 3-5 operator actions specific to this observation (not generic)
+9. Cite 2-4 authoritative bodies most relevant to this observation's domain — use the authority registry below
 
 Dimension discovery rules by domain:
 - Finance/Markets: currency, yields, institutional flows, futures positioning, sentiment, commodity, geopolitics, technicals, liquidity, on-chain/sector-specific
@@ -40,18 +41,30 @@ Dimension discovery rules by domain:
 - Food/Culinary: ingredient cost, margin, labour intensity, shelf life, seasonality, allergen profile, preparation complexity, waste factor, staff training, guest experience
 - General: if none of the above — choose the 10 lenses most likely to reveal something the operator cannot see unaided
 
+Authority registry (cite the most relevant 2-4 for this observation's domain):
+Finance: CME Group (cmegroup.com), FCA (fca.org.uk), SEC (sec.gov), Coinbase (coinbase.com)
+Medicine/UK: NHS (nhs.uk), NICE (nice.org.uk), GMC (gmc-uk.org), MHRA (gov.uk/mhra), WHO (who.int), SNOMED CT (snomed.org), MeSH/NLM (nlm.nih.gov/mesh)
+Medicine/US: FDA (fda.gov), CDC (cdc.gov), NIH MedlinePlus (medlineplus.gov), WHO (who.int)
+Law/UK: MoJ Courts Glossary (gov.uk), Law Society (lawsociety.org.uk), Cornell LII (law.cornell.edu)
+Law/US: Cornell LII (law.cornell.edu), Black's Law (thelawdictionary.org), SEC (sec.gov)
+Astrophysics: IAU (iau.org), NASA (nasa.gov), ESA (esa.int), ESO (eso.org), NASA ADS (adsabs.harvard.edu)
+Technology/Computing: IEEE (ieee.org), IETF (ietf.org), W3C (w3.org), ACM (acm.org), NIST (nist.gov)
+Engineering: NIST (nist.gov), ISO (iso.org), IEEE (ieee.org), ASME (asme.org)
+Standards (cross-domain): ISO (iso.org), BSI (bsigroup.com), NIST (nist.gov)
+Earth/Climate: USGS (usgs.gov), Met Office (metoffice.gov.uk), IPCC (ipcc.ch)
+
 Return ONLY valid JSON in this exact structure (no markdown, no fences):
 {
   "inferredDomain": "<primary domain name, e.g. Finance>",
   "inferredDomainFull": "<domain / sub-domain, e.g. Finance / Precious Metals>",
   "confidence": <integer 0-100>,
   "dimensions": [
-    { "id": "<short_snake_case_id>", "name": "<Dimension Name>", "signal": "<specific signal relevant to the observation — not a generic description>", "contribution": <integer 5-22>, "direction": "positive|negative|neutral" },
+    { "id": "<short_snake_case_id>", "name": "<Dimension Name>", "signal": "<specific signal relevant to the observation>", "contribution": <integer 5-22>, "direction": "positive|negative|neutral" },
     ... exactly 10 dimensions, contributions sum to exactly 100
   ],
   "pattern": "<single declarative sentence — the dominant structural pattern in this observation>",
   "findings": [
-    { "dimensionId": "<id matching one of the 10 above>", "text": "<finding: what this dimension reveals about the operator's observation>" },
+    { "dimensionId": "<id matching one of the 10 above>", "text": "<finding: what this dimension reveals about the observation>" },
     { "dimensionId": "<id>", "text": "<finding>" },
     { "dimensionId": "<id>", "text": "<finding>" },
     { "dimensionId": "<id>", "text": "<finding>" },
@@ -63,6 +76,10 @@ Return ONLY valid JSON in this exact structure (no markdown, no fences):
     "<specific action 1>",
     "<specific action 2>",
     "<specific action 3>"
+  ],
+  "citedAuthorities": [
+    { "shortName": "<e.g. NICE>", "name": "<full name>", "url": "<https://...>", "tier": "primary|regulatory|reference|standard|glossary", "relevance": "<one sentence: why this authority governs this observation>" },
+    ... 2-4 entries
   ]
 }`;
 }
@@ -73,16 +90,16 @@ function buildFallback(observation: string) {
     inferredDomainFull: "Domain inference unavailable",
     confidence: 0,
     dimensions: [
-      { id: "signal_1",  name: "Primary Signal",      signal: "RAPIDS unavailable — observation recorded", contribution: 12, direction: "neutral" },
-      { id: "signal_2",  name: "Secondary Signal",     signal: "RAPIDS unavailable — manual review required", contribution: 10, direction: "neutral" },
-      { id: "context",   name: "Context",              signal: "Authority feeds degraded", contribution: 10, direction: "neutral" },
-      { id: "temporal",  name: "Temporal",             signal: "Timing signals unavailable", contribution: 10, direction: "neutral" },
-      { id: "scale",     name: "Scale",                signal: "Scale assessment degraded", contribution: 10, direction: "neutral" },
-      { id: "causality", name: "Causality",            signal: "Causal chain unclear — feeds offline", contribution: 10, direction: "neutral" },
-      { id: "precedent", name: "Precedent",            signal: "Historical comparison unavailable", contribution: 10, direction: "neutral" },
-      { id: "risk",      name: "Risk",                 signal: "Risk assessment degraded", contribution: 10, direction: "neutral" },
-      { id: "action",    name: "Action Horizon",       signal: "Action signals unavailable", contribution: 10, direction: "neutral" },
-      { id: "unknown",   name: "Unknown Factors",      signal: "RAPIDS engine offline", contribution: 8,  direction: "neutral" },
+      { id: "signal_1",  name: "Primary Signal",   signal: "RAPIDS unavailable — observation recorded", contribution: 12, direction: "neutral" },
+      { id: "signal_2",  name: "Secondary Signal",  signal: "RAPIDS unavailable — manual review required", contribution: 10, direction: "neutral" },
+      { id: "context",   name: "Context",           signal: "Authority feeds degraded", contribution: 10, direction: "neutral" },
+      { id: "temporal",  name: "Temporal",          signal: "Timing signals unavailable", contribution: 10, direction: "neutral" },
+      { id: "scale",     name: "Scale",             signal: "Scale assessment degraded", contribution: 10, direction: "neutral" },
+      { id: "causality", name: "Causality",         signal: "Causal chain unclear — feeds offline", contribution: 10, direction: "neutral" },
+      { id: "precedent", name: "Precedent",         signal: "Historical comparison unavailable", contribution: 10, direction: "neutral" },
+      { id: "risk",      name: "Risk",              signal: "Risk assessment degraded", contribution: 10, direction: "neutral" },
+      { id: "action",    name: "Action Horizon",    signal: "Action signals unavailable", contribution: 10, direction: "neutral" },
+      { id: "unknown",   name: "Unknown Factors",   signal: "RAPIDS engine offline", contribution: 8,  direction: "neutral" },
     ],
     pattern: "RAPIDS engine unavailable — operator field judgment required",
     findings: [
@@ -92,13 +109,14 @@ function buildFallback(observation: string) {
       { dimensionId: "temporal",  text: "Timing unknown — observation recorded for manual review" },
       { dimensionId: "unknown",   text: "Unknown factors may be significant — operator judgment takes precedent" },
     ],
-    simonSummary: `RAPIDS engine unavailable. Observation "${observation.slice(0, 80)}${observation.length > 80 ? "…" : ""}" has been recorded. Retry analysis when the engine is available. Do not treat any dimension as authoritative — proceed with operator judgment only.`,
+    simonSummary: `RAPIDS engine unavailable. Observation "${observation.slice(0, 80)}${observation.length > 80 ? "…" : ""}" has been recorded. Retry analysis when the engine is available.`,
     rapidsCompression: "10 dimensions → RAPIDS engine unavailable → operator assessment required",
     suggestedActions: [
       "Record observation manually",
       "Retry analysis in 60 seconds",
       "Proceed with independent operator judgment",
     ],
+    citedAuthorities: [] as Array<{ shortName: string; name: string; url: string; tier: string; relevance: string }>,
   };
 }
 
@@ -118,18 +136,10 @@ router.post("/observe", async (req, res) => {
     const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     const parsed = JSON.parse(cleaned);
 
-    res.json({
-      success: true,
-      rawObservation: trimmed,
-      ...parsed,
-    });
+    res.json({ success: true, rawObservation: trimmed, ...parsed });
   } catch (err: any) {
     req.log.error(err, "observe analysis failed");
-    res.json({
-      success: true,
-      rawObservation: trimmed,
-      ...buildFallback(trimmed),
-    });
+    res.json({ success: true, rawObservation: trimmed, ...buildFallback(trimmed) });
   }
 });
 

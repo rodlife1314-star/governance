@@ -5,6 +5,7 @@ import { ObservationAnalysis } from "../augment-types";
 import RapidsAperture from "./RapidsAperture";
 import DimensionStack from "./DimensionStack";
 import SimonPanel from "./SimonPanel";
+import AuthorityStack from "./AuthorityStack";
 
 interface ObservationResultProps {
   analysis: ObservationAnalysis;
@@ -165,6 +166,15 @@ export default function ObservationResult({
           )}
         </div>
       </div>
+
+      {/* ── Authority Stack ── */}
+      {analysis.citedAuthorities && analysis.citedAuthorities.length > 0 && (
+        <AuthorityStack
+          authorities={analysis.citedAuthorities}
+          inferredDomain={analysis.inferredDomain}
+          inferredDomainFull={analysis.inferredDomainFull}
+        />
+      )}
 
       {/* ── Action bar ── */}
       <div className="shrink-0 border-t border-white/[0.04] bg-[#07080B]">

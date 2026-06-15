@@ -19,12 +19,21 @@ export interface DimensionalAnalysis {
   rapidsCompression: string;
 }
 
+export interface CitedAuthority {
+  shortName: string;
+  name: string;
+  url: string;
+  tier: "primary" | "regulatory" | "reference" | "standard" | "glossary";
+  relevance: string;
+}
+
 export interface ObservationAnalysis extends DimensionalAnalysis {
   rawObservation: string;
   inferredDomain: string;
   inferredDomainFull: string;
   confidence: number;
   suggestedActions: string[];
+  citedAuthorities?: CitedAuthority[];
 }
 
 export interface LiveFeedData {
