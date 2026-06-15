@@ -13,7 +13,7 @@ export default function SimonPanel({ pattern, findings, simonSummary, loading }:
 
       {/* PATTERN */}
       <div className="px-5 pt-5 pb-4 border-b border-white/[0.04]">
-        <div className="text-[9px] font-mono font-bold tracking-[0.25em] text-[#6B7280] uppercase mb-3">PATTERN</div>
+        <div className="text-[9px] font-mono font-bold tracking-[0.25em] text-[#AAB4C2] uppercase mb-3">PATTERN</div>
         <AnimatePresence mode="wait">
           {loading ? (
             <motion.div key="loading-pattern" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
@@ -40,7 +40,7 @@ export default function SimonPanel({ pattern, findings, simonSummary, loading }:
 
       {/* FINDINGS — Box 5: Extracted Meanings */}
       <div className="px-5 pt-4 pb-4 border-b border-white/[0.04] flex-1">
-        <div className="text-[9px] font-mono font-bold tracking-[0.25em] text-[#6B7280] uppercase mb-3">FINDINGS</div>
+        <div className="text-[9px] font-mono font-bold tracking-[0.25em] text-[#AAB4C2] uppercase mb-3">FINDINGS</div>
         <AnimatePresence mode="wait">
           {loading ? (
             <motion.div key="loading-findings" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
@@ -70,7 +70,7 @@ export default function SimonPanel({ pattern, findings, simonSummary, loading }:
                   className="flex space-x-2.5 items-start"
                 >
                   <div className="mt-1.5 w-1 h-1 rounded-full bg-[#E0AF68]/60 shrink-0" />
-                  <span className="text-[11px] font-mono text-[#C4CDD8] leading-relaxed">{f}</span>
+                  <span className="text-[11px] font-mono text-[#E8EDF5] leading-relaxed">{f}</span>
                 </motion.div>
               ))}
             </motion.div>
@@ -83,7 +83,7 @@ export default function SimonPanel({ pattern, findings, simonSummary, loading }:
       {/* SIMON — Extracted Meaning / Self-Audit */}
       <div className="px-5 pt-4 pb-5">
         <div className="flex items-center space-x-2 mb-3">
-          <div className="text-[9px] font-mono font-bold tracking-[0.25em] text-[#6B7280] uppercase">SIMON</div>
+          <div className="text-[9px] font-mono font-bold tracking-[0.25em] text-[#AAB4C2] uppercase">SIMON</div>
           <div className="flex-1 h-px bg-white/[0.05]" />
           <div className="text-[8px] font-mono text-[#5A6575]">pattern · meaning · route</div>
         </div>
@@ -102,7 +102,7 @@ export default function SimonPanel({ pattern, findings, simonSummary, loading }:
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5, delay: 0.2 }}
-              className="text-[10.5px] font-mono text-[#A8B4C0] leading-relaxed border-l-2 border-[#E0AF68]/30 pl-3"
+              className="text-[10.5px] font-mono text-[#C8D0DB] leading-relaxed border-l-2 border-[#E0AF68]/40 pl-3"
             >
               {simonSummary}
             </motion.div>

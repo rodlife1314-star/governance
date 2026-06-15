@@ -61,15 +61,13 @@ function AuthorityPanel({ feed }: { feed: FeedRecord }) {
 
   return (
     <div className={`mx-3 mb-2 rounded border ${cfg.border} ${cfg.bg} p-3 space-y-2`}>
-      {/* Top row: status badge */}
       <div className="flex items-center justify-between gap-2">
-        <div className="text-[8px] font-mono text-[#6B7280] uppercase tracking-wider">Feed Authority</div>
+        <div className="text-[8px] font-mono text-[#AAB4C2] uppercase tracking-wider">Feed Authority</div>
         <FeedStatusBadge status={feed.status} />
       </div>
 
-      {/* Data source */}
       <div>
-        <div className="text-[7.5px] font-mono text-[#4A5568] uppercase tracking-wider mb-0.5">Data Source</div>
+        <div className="text-[7.5px] font-mono text-[#6B7280] uppercase tracking-wider mb-0.5">Data Source</div>
         {feed.authorityUrl ? (
           <a
             href={feed.authorityUrl}
@@ -85,10 +83,9 @@ function AuthorityPanel({ feed }: { feed: FeedRecord }) {
         )}
       </div>
 
-      {/* Definitional authority */}
       {feed.definitionAuthority && (
         <div>
-          <div className="text-[7.5px] font-mono text-[#4A5568] uppercase tracking-wider mb-0.5">Definition Authority</div>
+          <div className="text-[7.5px] font-mono text-[#6B7280] uppercase tracking-wider mb-0.5">Definition Authority</div>
           {feed.definitionUrl ? (
             <a
               href={feed.definitionUrl}
@@ -100,56 +97,51 @@ function AuthorityPanel({ feed }: { feed: FeedRecord }) {
               {feed.definitionAuthority}
             </a>
           ) : (
-            <div className="text-[9px] font-mono text-[#64D2FF]/60">{feed.definitionAuthority}</div>
+            <div className="text-[9px] font-mono text-[#64D2FF]/70">{feed.definitionAuthority}</div>
           )}
         </div>
       )}
 
-      {/* Value */}
       {feed.value !== null && (
         <div>
-          <div className="text-[8px] font-mono text-[#6B7280] uppercase tracking-wider mb-0.5">Current Value</div>
+          <div className="text-[7.5px] font-mono text-[#6B7280] uppercase tracking-wider mb-0.5">Current Value</div>
           <div className="text-[9px] font-mono text-white leading-snug">{feed.valueLabel}</div>
         </div>
       )}
 
-      {/* Timestamps + refresh */}
       <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
         <div>
-          <div className="text-[7.5px] font-mono text-[#4A5568] uppercase tracking-wider mb-0.5">Data Timestamp</div>
-          <div className="text-[8.5px] font-mono text-[#8A9DB0]">{dataTs}</div>
+          <div className="text-[7.5px] font-mono text-[#6B7280] uppercase tracking-wider mb-0.5">Data Timestamp</div>
+          <div className="text-[8.5px] font-mono text-[#C8D0DB]">{dataTs}</div>
         </div>
         <div>
-          <div className="text-[7.5px] font-mono text-[#4A5568] uppercase tracking-wider mb-0.5">Fetched</div>
-          <div className="text-[8.5px] font-mono text-[#8A9DB0]">{formatAge(feed.fetchedAt)}</div>
+          <div className="text-[7.5px] font-mono text-[#6B7280] uppercase tracking-wider mb-0.5">Fetched</div>
+          <div className="text-[8.5px] font-mono text-[#C8D0DB]">{formatAge(feed.fetchedAt)}</div>
         </div>
         <div>
-          <div className="text-[7.5px] font-mono text-[#4A5568] uppercase tracking-wider mb-0.5">Refresh Interval</div>
-          <div className="text-[8.5px] font-mono text-[#8A9DB0]">{formatInterval(feed.refreshIntervalMs)}</div>
+          <div className="text-[7.5px] font-mono text-[#6B7280] uppercase tracking-wider mb-0.5">Refresh Interval</div>
+          <div className="text-[8.5px] font-mono text-[#C8D0DB]">{formatInterval(feed.refreshIntervalMs)}</div>
         </div>
         <div>
-          <div className="text-[7.5px] font-mono text-[#4A5568] uppercase tracking-wider mb-0.5">Cache Age</div>
-          <div className="text-[8.5px] font-mono text-[#8A9DB0]">{feed.cacheAgeMs < 1000 ? "fresh" : formatAge(Date.now() - feed.cacheAgeMs)}</div>
+          <div className="text-[7.5px] font-mono text-[#6B7280] uppercase tracking-wider mb-0.5">Cache Age</div>
+          <div className="text-[8.5px] font-mono text-[#C8D0DB]">{feed.cacheAgeMs < 1000 ? "fresh" : formatAge(Date.now() - feed.cacheAgeMs)}</div>
         </div>
       </div>
 
-      {/* Packet ID */}
       <div>
-        <div className="text-[7.5px] font-mono text-[#4A5568] uppercase tracking-wider mb-0.5">Source Packet</div>
-        <div className="text-[8px] font-mono text-[#6B7280] break-all">{feed.packetId}</div>
+        <div className="text-[7.5px] font-mono text-[#6B7280] uppercase tracking-wider mb-0.5">Source Packet</div>
+        <div className="text-[8px] font-mono text-[#AAB4C2] break-all">{feed.packetId}</div>
       </div>
 
-      {/* Context */}
       <div>
-        <div className="text-[7.5px] font-mono text-[#4A5568] uppercase tracking-wider mb-0.5">Chain of Custody</div>
-        <div className="text-[8px] font-mono text-[#8A9DB0] leading-relaxed">{feed.context}</div>
+        <div className="text-[7.5px] font-mono text-[#6B7280] uppercase tracking-wider mb-0.5">Chain of Custody</div>
+        <div className="text-[8px] font-mono text-[#C8D0DB] leading-relaxed">{feed.context}</div>
       </div>
 
-      {/* Error */}
       {feed.error && (
         <div className="border-t border-rose-500/20 pt-2">
           <div className="text-[7.5px] font-mono text-rose-400 uppercase tracking-wider mb-0.5">Failure State</div>
-          <div className="text-[8px] font-mono text-rose-300/70 leading-relaxed">{feed.error}</div>
+          <div className="text-[8px] font-mono text-rose-300/80 leading-relaxed">{feed.error}</div>
         </div>
       )}
     </div>
@@ -168,9 +160,10 @@ function DimensionRow({
   feed?: FeedRecord;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const color  = DIRECTION_COLOR[dim.direction];
-  const arrow  = DIRECTION_LABEL[dim.direction];
+  const color    = DIRECTION_COLOR[dim.direction];
+  const arrow    = DIRECTION_LABEL[dim.direction];
   const barWidth = Math.min(100, dim.contribution);
+  const hasValue = feed && feed.valueLabel && feed.status !== "unavailable";
 
   return (
     <AnimatePresence>
@@ -180,36 +173,44 @@ function DimensionRow({
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -8 }}
           transition={{ duration: 0.2, delay: index * 0.03 }}
-          className="group cursor-pointer border-b border-white/[0.025]"
+          className="group cursor-pointer border-b border-white/[0.03]"
           onClick={() => setExpanded(!expanded)}
         >
-          <div className="py-2.5 px-4 hover:bg-white/[0.015] transition-all">
-            {/* Row header */}
-            <div className="flex items-center justify-between mb-1.5">
-              <div className="flex items-center space-x-2 min-w-0">
-                <span className="text-[9px] font-mono text-[#4A5568] w-4 shrink-0">{String(index + 1).padStart(2, "0")}</span>
-                <span className="text-[10px] font-mono font-medium text-[#A8B4C0] truncate">{dim.name}</span>
+          <div className="py-3 px-4 hover:bg-white/[0.02] transition-all">
+            {/* Row header: value as hero */}
+            <div className="flex items-start justify-between gap-2 mb-2">
+              <div className="flex items-start space-x-2.5 min-w-0">
+                <span className="text-[8.5px] font-mono text-[#6B7280] shrink-0 mt-1">{String(index + 1).padStart(2, "0")}</span>
+                <div className="min-w-0">
+                  {hasValue ? (
+                    <>
+                      <div className="text-[13px] font-mono font-bold text-white leading-none tracking-tight">{feed!.valueLabel}</div>
+                      <div className="text-[8px] font-mono text-[#6B7280] mt-0.5 truncate">{dim.name}</div>
+                    </>
+                  ) : (
+                    <div className="text-[11px] font-mono font-semibold text-[#C8D0DB] truncate leading-tight">{dim.name}</div>
+                  )}
+                </div>
               </div>
-              <div className="flex items-center space-x-2 shrink-0 ml-2">
+              <div className="flex items-center space-x-1.5 shrink-0 mt-0.5">
                 {feed && <FeedStatusBadge status={feed.status} />}
-                <span className="text-[9px] font-mono" style={{ color }}>{arrow}</span>
-                <span className="text-[10px] font-mono font-bold" style={{ color }}>{dim.contribution.toFixed(1)}%</span>
+                <span className="text-[10px] font-mono font-bold" style={{ color }}>{arrow} {dim.contribution.toFixed(1)}%</span>
               </div>
             </div>
 
             {/* Contribution bar */}
-            <div className="h-px bg-white/[0.03] rounded-full overflow-hidden mb-1.5">
+            <div className="h-px bg-white/[0.05] rounded-full overflow-hidden mb-2">
               <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: `${barWidth}%` }}
                 transition={{ duration: 0.6, ease: "easeOut", delay: index * 0.04 }}
-                className="h-full rounded-full opacity-70"
-                style={{ backgroundColor: color }}
+                className="h-full rounded-full"
+                style={{ backgroundColor: color, opacity: 0.7 }}
               />
             </div>
 
             {/* Signal text */}
-            <div className="text-[8.5px] font-mono text-[#6B7A88] group-hover:text-[#90A0B0] transition-colors leading-relaxed">
+            <div className="text-[8.5px] font-mono text-[#AAB4C2] group-hover:text-[#C8D0DB] transition-colors leading-relaxed">
               {dim.signal}
             </div>
           </div>
@@ -236,7 +237,7 @@ function DimensionRow({
                 className="overflow-hidden"
               >
                 <div className="mx-3 mb-2 px-3 py-2 rounded border border-white/[0.04] bg-white/[0.02]">
-                  <div className="text-[8px] font-mono text-[#5A6575]">No authority feed mapped for dimension <span className="text-[#8A9DB0]">{dim.id}</span></div>
+                  <div className="text-[8px] font-mono text-[#6B7280]">No authority feed for <span className="text-[#AAB4C2]">{dim.id}</span></div>
                 </div>
               </motion.div>
             )}
@@ -270,25 +271,23 @@ function SyntheticRow({ index }: { index: number }) {
   return (
     <motion.div
       initial={{ opacity: 0, x: -6 }}
-      animate={{ opacity: 0.3, x: 0 }}
+      animate={{ opacity: 0.25, x: 0 }}
       transition={{ duration: 0.2, delay: index * 0.02 }}
       className="py-2 px-4 border-b border-white/[0.015]"
     >
       <div className="flex items-baseline justify-between mb-1">
         <div className="flex items-baseline space-x-2.5">
-          <span className="text-[9px] font-mono text-[#3A4555] w-4 shrink-0">{String(index + 11).padStart(2, "0")}</span>
-          <span className="text-[9px] font-mono text-[#4A5568]">{name}</span>
+          <span className="text-[8.5px] font-mono text-[#3A4555] w-4 shrink-0">{String(index + 11).padStart(2, "0")}</span>
+          <span className="text-[9px] font-mono text-[#5A6575]">{name}</span>
         </div>
-        <span className="text-[9px] font-mono text-[#3A4555]">{contrib.toFixed(1)}%</span>
+        <span className="text-[9px] font-mono text-[#4A5568]">{contrib.toFixed(1)}%</span>
       </div>
       <div className="h-px bg-white/[0.02] rounded-full overflow-hidden">
-        <div className="h-full rounded-full opacity-25" style={{ backgroundColor: color, width: `${contrib * 5}%` }} />
+        <div className="h-full rounded-full opacity-20" style={{ backgroundColor: color, width: `${contrib * 5}%` }} />
       </div>
     </motion.div>
   );
 }
-
-// ── Live feed legend ─────────────────────────────────────────────────────────
 
 function FeedsLegend({ feeds }: { feeds: FeedRecord[] }) {
   if (feeds.length === 0) return null;
@@ -298,46 +297,27 @@ function FeedsLegend({ feeds }: { feeds: FeedRecord[] }) {
   const unavail   = feeds.filter((f) => f.status === "unavailable").length;
 
   return (
-    <div className="flex items-center gap-2 flex-wrap">
-      {live > 0 && (
-        <span className="text-[7.5px] font-mono text-emerald-400 flex items-center gap-1">
-          <span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />{live}L
-        </span>
-      )}
-      {cached > 0 && (
-        <span className="text-[7.5px] font-mono text-[#E0AF68] flex items-center gap-1">
-          <span className="w-1 h-1 rounded-full bg-[#E0AF68]" />{cached}C
-        </span>
-      )}
-      {degraded > 0 && (
-        <span className="text-[7.5px] font-mono text-amber-400 flex items-center gap-1">
-          <span className="w-1 h-1 rounded-full bg-amber-400" />{degraded}D
-        </span>
-      )}
-      {unavail > 0 && (
-        <span className="text-[7.5px] font-mono text-rose-400 flex items-center gap-1">
-          <span className="w-1 h-1 rounded-full bg-rose-500" />{unavail}U
-        </span>
-      )}
+    <div className="flex items-center gap-2">
+      {live > 0 && <span className="text-[7.5px] font-mono text-emerald-400 flex items-center gap-1"><span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />{live}L</span>}
+      {cached > 0 && <span className="text-[7.5px] font-mono text-[#E0AF68] flex items-center gap-1"><span className="w-1 h-1 rounded-full bg-[#E0AF68]" />{cached}C</span>}
+      {degraded > 0 && <span className="text-[7.5px] font-mono text-amber-400 flex items-center gap-1"><span className="w-1 h-1 rounded-full bg-amber-400" />{degraded}D</span>}
+      {unavail > 0 && <span className="text-[7.5px] font-mono text-rose-400 flex items-center gap-1"><span className="w-1 h-1 rounded-full bg-rose-500" />{unavail}U</span>}
     </div>
   );
 }
-
-// ── Main component ───────────────────────────────────────────────────────────
 
 export default function DimensionStack({ dimensions, loading, rapidsCompression, feeds = [] }: DimensionStackProps) {
   const [expandLevel, setExpandLevel] = useState<ExpandLevel>(10);
 
   const feedMap = new Map<string, FeedRecord>(feeds.map((f) => [f.id, f]));
-
   const extraCount = expandLevel > 10 ? Math.min(expandLevel - 10, 30) : 0;
 
   return (
-    <div className="flex flex-col h-full border-r border-white/[0.04] bg-[#07080B]" id="dimension-stack">
+    <div className="flex flex-col h-full border-l border-r border-white/[0.04] bg-[#07080B]" id="dimension-stack">
       {/* Header */}
       <div className="px-4 py-3 border-b border-white/[0.04] flex items-center justify-between shrink-0">
         <div className="flex items-center space-x-2">
-          <span className="text-[9px] font-mono font-bold tracking-[0.2em] text-[#6B7280] uppercase">DIMENSIONS</span>
+          <span className="text-[9px] font-mono font-bold tracking-[0.2em] text-[#AAB4C2] uppercase">DIMENSIONS</span>
           {loading && <span className="text-[8px] font-mono text-[#E0AF68] animate-pulse">RAPIDS ↓</span>}
         </div>
         <div className="flex items-center space-x-2">
@@ -350,7 +330,7 @@ export default function DimensionStack({ dimensions, loading, rapidsCompression,
                 className={`text-[8px] font-mono cursor-pointer px-1.5 py-0.5 rounded transition-all ${
                   expandLevel === level
                     ? "text-[#E0AF68] bg-[#E0AF68]/10"
-                    : "text-[#5A6575] hover:text-[#8A9DB0]"
+                    : "text-[#6B7280] hover:text-[#AAB4C2]"
                 }`}
               >
                 {level}
@@ -364,12 +344,16 @@ export default function DimensionStack({ dimensions, loading, rapidsCompression,
       <div className="flex-1 overflow-y-auto scrollbar-thin">
         {loading && dimensions.length === 0
           ? Array.from({ length: 10 }).map((_, i) => (
-              <div key={i} className="py-3 px-4 border-b border-white/[0.025] animate-pulse">
-                <div className="flex justify-between mb-1.5">
-                  <div className="h-2 w-24 bg-white/[0.04] rounded" />
-                  <div className="h-2 w-8 bg-white/[0.04] rounded" />
+              <div key={i} className="py-3 px-4 border-b border-white/[0.03] animate-pulse">
+                <div className="flex justify-between mb-2">
+                  <div className="space-y-1">
+                    <div className="h-4 w-20 bg-white/[0.06] rounded" />
+                    <div className="h-2 w-28 bg-white/[0.03] rounded" />
+                  </div>
+                  <div className="h-2 w-12 bg-white/[0.04] rounded" />
                 </div>
-                <div className="h-px bg-white/[0.03] rounded-full" />
+                <div className="h-px bg-white/[0.04] rounded-full mb-2" />
+                <div className="h-2 w-full bg-white/[0.03] rounded" />
               </div>
             ))
           : (
@@ -393,12 +377,12 @@ export default function DimensionStack({ dimensions, loading, rapidsCompression,
 
       {/* RAPIDS compression footer */}
       <div className="px-4 py-2.5 border-t border-white/[0.04] shrink-0">
-        <div className="text-[8px] font-mono text-[#5A6575] leading-relaxed">
-          <span className="text-[#E0AF68]/50 mr-1.5">RAPIDS</span>
+        <div className="text-[8px] font-mono text-[#AAB4C2] leading-relaxed">
+          <span className="text-[#E0AF68]/60 mr-1.5">RAPIDS</span>
           {rapidsCompression || "awaiting field data"}
         </div>
         {feeds.length > 0 && (
-          <div className="text-[7px] font-mono text-[#4A5568] mt-0.5">
+          <div className="text-[7px] font-mono text-[#6B7280] mt-0.5">
             Click any dimension to inspect authority chain
           </div>
         )}

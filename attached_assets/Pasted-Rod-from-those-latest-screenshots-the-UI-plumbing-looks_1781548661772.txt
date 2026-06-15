@@ -1,0 +1,189 @@
+Rod, from those latest screenshots the UI plumbing looks healthy enough that the next step is not visual work — it’s feed verification.
+
+The question now is:
+
+Is the number on the screen
+the same number coming from the source?
+
+Not:
+
+Is the source connected?
+
+Those are different tests.
+
+⸻
+
+Riker Verification Run
+
+I would tell Riker to run this audit:
+
+DXY
+
+Screen:
+
+115.853
+
+Verify against:
+
+open.er-api.com
+or
+DXY calculation endpoint
+
+Return:
+
+source_value
+screen_value
+delta
+timestamp
+
+⸻
+
+Yields
+
+Screen:
+
+4.471%
+
+Verify against:
+
+Yahoo ^TNX
+
+Return:
+
+source
+screen
+delta
+age_seconds
+
+⸻
+
+VIX
+
+Screen:
+
+17.68
+
+Verify against:
+
+CBOE CSV
+
+Check:
+
+live
+stale
+cached
+
+⸻
+
+OKX
+
+Check both:
+
+Open Interest
+Funding
+
+Verify:
+
+source packet
+rendered packet
+
+⸻
+
+Coinbase
+
+Screen:
+
+BTC 66821.65
+
+Verify:
+
+Coinbase bid
+Coinbase ask
+rendered midpoint
+
+⸻
+
+The important audit
+
+Not this:
+
+Feed Connected = TRUE
+
+This is meaningless.
+
+Instead:
+
+Feed Connected
+Packet Received
+Packet Parsed
+Packet Stored
+Packet Rendered
+
+All five must pass.
+
+⸻
+
+What I see from the screenshots
+
+The architecture is now behaving like an instrument.
+
+The DIMS page is actually useful.
+
+I can immediately see:
+
+LIVE
+LIVE
+LIVE
+LIVE
+LIVE
+NO FEED
+
+That is honest.
+
+The Geopolitics node saying:
+
+NO FEED
+
+is actually a good sign.
+
+It means the system is exposing absence rather than inventing certainty.
+
+⸻
+
+Prompt for Riker
+
+PATHFINDER LIVE AUTHORITY VERIFICATION RUN
+Objective:
+Verify that every displayed value matches its upstream authority source.
+For each dimension:
+1. Fetch current source value.
+2. Capture rendered UI value.
+3. Calculate delta.
+4. Report packet age.
+5. Report source timestamp.
+6. Report render timestamp.
+7. Flag stale packets > 60 seconds.
+8. Flag delta > 0.1%.
+Output format:
+DIMENSION
+SOURCE
+SOURCE VALUE
+SCREEN VALUE
+DELTA
+PACKET AGE
+STATUS
+Status:
+PASS
+STALE
+MISMATCH
+NO FEED
+Do not report connection status alone.
+Verify full chain:
+Source
+→ Ingestion
+→ Processing
+→ Storage
+→ Render
+Return a complete authority verification report.
+
+From what I’m seeing, the plumbing appears substantially complete. The next test is whether 115.853 is really 115.853, not whether a green “LIVE” badge is showing. That’s the audit that turns a good-looking instrument into a trusted instrument.

@@ -318,18 +318,18 @@ export default function App() {
             {/* Desktop: 3-column grid */}
             <div
               className="hidden md:grid flex-1 overflow-hidden"
-              style={{ gridTemplateColumns: "360px 1fr 340px" }}
+              style={{ gridTemplateColumns: "1fr 360px 340px" }}
             >
+              <RapidsAperture
+                dimensions={analysis?.dimensions || []}
+                loading={analysisLoading}
+                rapidsCompression={analysis?.rapidsCompression || ""}
+              />
               <DimensionStack
                 dimensions={analysis?.dimensions || []}
                 loading={analysisLoading}
                 rapidsCompression={analysis?.rapidsCompression || ""}
                 feeds={dimensionFeeds}
-              />
-              <RapidsAperture
-                dimensions={analysis?.dimensions || []}
-                loading={analysisLoading}
-                rapidsCompression={analysis?.rapidsCompression || ""}
               />
               <SimonPanel
                 pattern={analysis?.pattern || ""}
