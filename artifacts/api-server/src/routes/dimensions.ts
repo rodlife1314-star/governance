@@ -287,7 +287,7 @@ const FEED_DEFS: FeedDef[] = [
     authorityUrl: "https://finance.yahoo.com/quote/CL%3DF",
     definitionAuthority: "EIA (U.S. Energy Information Administration)",
     definitionUrl: "https://www.eia.gov/petroleum/",
-    refreshMs: 300_000,
+    refreshMs: 60_000,
     valueUnit: "USD/bbl",
     context: "WTI crude oil front-month futures. Commodity risk-on correlates with BTC macro backdrop. Rising crude = expansion signal = favorable environment for risk assets.",
     fetch: async () => {
