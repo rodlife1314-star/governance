@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { getAbsoluteUrl } from "./utils";
 import { LiveFeedData, DimensionalAnalysis, FeedRecord, Finding } from "./augment-types";
 import { AssetId, ASSETS, getAsset, generateMockFeed } from "./assets";
+import { DomainId, getDomain } from "./domains";
 
 import FieldBar from "./components/FieldBar";
 import DimensionStack from "./components/DimensionStack";
@@ -10,6 +11,7 @@ import RapidsAperture from "./components/RapidsAperture";
 import SimonPanel from "./components/SimonPanel";
 import OperatorChannel from "./components/OperatorChannel";
 import ActionPanel from "./components/ActionPanel";
+import DomainStandby from "./components/DomainStandby";
 
 type Mode = "augment" | "archive" | "action";
 type AugmentTab = "field" | "dims" | "intel";
@@ -33,6 +35,7 @@ interface AuditRecord {
 export default function App() {
   const [mode, setMode] = useState<Mode>("augment");
   const [selectedAsset, setSelectedAsset] = useState<AssetId>("BTC");
+  const [selectedDomain, setSelectedDomain] = useState<DomainId>("FINANCE");
   const [augmentTab, setAugmentTab] = useState<AugmentTab>("field");
 
   // Live feed
@@ -288,6 +291,8 @@ export default function App() {
         setMode={setMode}
         selectedAsset={selectedAsset}
         onAssetChange={handleAssetChange}
+        selectedDomain={selectedDomain}
+        onDomainChange={setSelectedDomain}
       />
 
       <AnimatePresence mode="wait">
@@ -301,75 +306,92 @@ export default function App() {
             transition={{ duration: 0.25 }}
             className="flex-1 flex flex-col overflow-hidden"
           >
-            {/* Mobile sub-tab bar */}
-            <div className="md:hidden flex border-b border-white/[0.04] shrink-0 bg-[#07080B]">
-              {([["field", "LENS"], ["dims", "DIMS"], ["intel", "FINDINGS"]] as [AugmentTab, string][]).map(([id, label]) => (
-                <button
-                  key={id}
-                  onClick={() => setAugmentTab(id)}
-                  className={`flex-1 py-2.5 text-[9px] font-mono font-bold tracking-[0.2em] transition-all cursor-pointer border-b-2 ${
-                    augmentTab === id
-                      ? "text-white border-[#E0AF68]"
-                      : "text-[#5A6575] border-transparent hover:text-[#8A9DB0]"
-                  }`}
+            <AnimatePresence mode="wait">
+              {selectedDomain !== "FINANCE" ? (
+                /* ── Non-Finance domain: standby screen ── */
+                <DomainStandby key={selectedDomain} domain={getDomain(selectedDomain)} />
+              ) : (
+                /* ── Finance: full analysis instrument ── */
+                <motion.div
+                  key="finance"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="flex-1 flex flex-col overflow-hidden"
                 >
-                  {label}
-                </button>
-              ))}
-            </div>
+                  {/* Mobile sub-tab bar */}
+                  <div className="md:hidden flex border-b border-white/[0.04] shrink-0 bg-[#07080B]">
+                    {([["field", "LENS"], ["dims", "DIMS"], ["intel", "FINDINGS"]] as [AugmentTab, string][]).map(([id, label]) => (
+                      <button
+                        key={id}
+                        onClick={() => setAugmentTab(id)}
+                        className={`flex-1 py-2.5 text-[9px] font-mono font-bold tracking-[0.2em] transition-all cursor-pointer border-b-2 ${
+                          augmentTab === id
+                            ? "text-white border-[#E0AF68]"
+                            : "text-[#5A6575] border-transparent hover:text-[#8A9DB0]"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
 
-            {/* Desktop: 3-column grid */}
-            <div
-              className="hidden md:grid flex-1 overflow-hidden"
-              style={{ gridTemplateColumns: "1fr 360px 340px" }}
-            >
-              <RapidsAperture
-                dimensions={analysis?.dimensions || []}
-                loading={analysisLoading}
-                rapidsCompression={analysis?.rapidsCompression || ""}
-              />
-              <DimensionStack
-                dimensions={analysis?.dimensions || []}
-                loading={analysisLoading}
-                rapidsCompression={analysis?.rapidsCompression || ""}
-                feeds={dimensionFeeds}
-              />
-              <SimonPanel
-                pattern={analysis?.pattern || ""}
-                findings={analysis?.findings || []}
-                simonSummary={analysis?.simonSummary || ""}
-                loading={analysisLoading}
-                dimensions={analysis?.dimensions || []}
-              />
-            </div>
+                  {/* Desktop: 3-column grid */}
+                  <div
+                    className="hidden md:grid flex-1 overflow-hidden"
+                    style={{ gridTemplateColumns: "1fr 360px 340px" }}
+                  >
+                    <RapidsAperture
+                      dimensions={analysis?.dimensions || []}
+                      loading={analysisLoading}
+                      rapidsCompression={analysis?.rapidsCompression || ""}
+                    />
+                    <DimensionStack
+                      dimensions={analysis?.dimensions || []}
+                      loading={analysisLoading}
+                      rapidsCompression={analysis?.rapidsCompression || ""}
+                      feeds={dimensionFeeds}
+                    />
+                    <SimonPanel
+                      pattern={analysis?.pattern || ""}
+                      findings={analysis?.findings || []}
+                      simonSummary={analysis?.simonSummary || ""}
+                      loading={analysisLoading}
+                      dimensions={analysis?.dimensions || []}
+                    />
+                  </div>
 
-            {/* Mobile: single panel */}
-            <div className="md:hidden flex-1 overflow-hidden">
-              {augmentTab === "field" && (
-                <RapidsAperture
-                  dimensions={analysis?.dimensions || []}
-                  loading={analysisLoading}
-                  rapidsCompression={analysis?.rapidsCompression || ""}
-                />
+                  {/* Mobile: single panel */}
+                  <div className="md:hidden flex-1 overflow-hidden">
+                    {augmentTab === "field" && (
+                      <RapidsAperture
+                        dimensions={analysis?.dimensions || []}
+                        loading={analysisLoading}
+                        rapidsCompression={analysis?.rapidsCompression || ""}
+                      />
+                    )}
+                    {augmentTab === "dims" && (
+                      <DimensionStack
+                        dimensions={analysis?.dimensions || []}
+                        loading={analysisLoading}
+                        rapidsCompression={analysis?.rapidsCompression || ""}
+                        feeds={dimensionFeeds}
+                      />
+                    )}
+                    {augmentTab === "intel" && (
+                      <SimonPanel
+                        pattern={analysis?.pattern || ""}
+                        findings={analysis?.findings || []}
+                        simonSummary={analysis?.simonSummary || ""}
+                        loading={analysisLoading}
+                        dimensions={analysis?.dimensions || []}
+                      />
+                    )}
+                  </div>
+                </motion.div>
               )}
-              {augmentTab === "dims" && (
-                <DimensionStack
-                  dimensions={analysis?.dimensions || []}
-                  loading={analysisLoading}
-                  rapidsCompression={analysis?.rapidsCompression || ""}
-                  feeds={dimensionFeeds}
-                />
-              )}
-              {augmentTab === "intel" && (
-                <SimonPanel
-                  pattern={analysis?.pattern || ""}
-                  findings={analysis?.findings || []}
-                  simonSummary={analysis?.simonSummary || ""}
-                  loading={analysisLoading}
-                  dimensions={analysis?.dimensions || []}
-                />
-              )}
-            </div>
+            </AnimatePresence>
           </motion.div>
         )}
 
