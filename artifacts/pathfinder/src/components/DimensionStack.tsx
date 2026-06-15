@@ -63,13 +63,13 @@ function AuthorityPanel({ feed }: { feed: FeedRecord }) {
     <div className={`mx-3 mb-2 rounded border ${cfg.border} ${cfg.bg} p-3 space-y-2`}>
       {/* Top row: status badge */}
       <div className="flex items-center justify-between gap-2">
-        <div className="text-[8px] font-mono text-[#4A5568] uppercase tracking-wider">Feed Authority</div>
+        <div className="text-[8px] font-mono text-[#6B7280] uppercase tracking-wider">Feed Authority</div>
         <FeedStatusBadge status={feed.status} />
       </div>
 
       {/* Data source */}
       <div>
-        <div className="text-[7.5px] font-mono text-[#3A4555] uppercase tracking-wider mb-0.5">Data Source</div>
+        <div className="text-[7.5px] font-mono text-[#4A5568] uppercase tracking-wider mb-0.5">Data Source</div>
         {feed.authorityUrl ? (
           <a
             href={feed.authorityUrl}
@@ -88,7 +88,7 @@ function AuthorityPanel({ feed }: { feed: FeedRecord }) {
       {/* Definitional authority */}
       {feed.definitionAuthority && (
         <div>
-          <div className="text-[7.5px] font-mono text-[#3A4555] uppercase tracking-wider mb-0.5">Definition Authority</div>
+          <div className="text-[7.5px] font-mono text-[#4A5568] uppercase tracking-wider mb-0.5">Definition Authority</div>
           {feed.definitionUrl ? (
             <a
               href={feed.definitionUrl}
@@ -108,7 +108,7 @@ function AuthorityPanel({ feed }: { feed: FeedRecord }) {
       {/* Value */}
       {feed.value !== null && (
         <div>
-          <div className="text-[8px] font-mono text-[#4A5568] uppercase tracking-wider mb-0.5">Current Value</div>
+          <div className="text-[8px] font-mono text-[#6B7280] uppercase tracking-wider mb-0.5">Current Value</div>
           <div className="text-[9px] font-mono text-white leading-snug">{feed.valueLabel}</div>
         </div>
       )}
@@ -116,33 +116,33 @@ function AuthorityPanel({ feed }: { feed: FeedRecord }) {
       {/* Timestamps + refresh */}
       <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
         <div>
-          <div className="text-[7.5px] font-mono text-[#3A4555] uppercase tracking-wider mb-0.5">Data Timestamp</div>
-          <div className="text-[8.5px] font-mono text-[#6B7280]">{dataTs}</div>
+          <div className="text-[7.5px] font-mono text-[#4A5568] uppercase tracking-wider mb-0.5">Data Timestamp</div>
+          <div className="text-[8.5px] font-mono text-[#8A9DB0]">{dataTs}</div>
         </div>
         <div>
-          <div className="text-[7.5px] font-mono text-[#3A4555] uppercase tracking-wider mb-0.5">Fetched</div>
-          <div className="text-[8.5px] font-mono text-[#6B7280]">{formatAge(feed.fetchedAt)}</div>
+          <div className="text-[7.5px] font-mono text-[#4A5568] uppercase tracking-wider mb-0.5">Fetched</div>
+          <div className="text-[8.5px] font-mono text-[#8A9DB0]">{formatAge(feed.fetchedAt)}</div>
         </div>
         <div>
-          <div className="text-[7.5px] font-mono text-[#3A4555] uppercase tracking-wider mb-0.5">Refresh Interval</div>
-          <div className="text-[8.5px] font-mono text-[#6B7280]">{formatInterval(feed.refreshIntervalMs)}</div>
+          <div className="text-[7.5px] font-mono text-[#4A5568] uppercase tracking-wider mb-0.5">Refresh Interval</div>
+          <div className="text-[8.5px] font-mono text-[#8A9DB0]">{formatInterval(feed.refreshIntervalMs)}</div>
         </div>
         <div>
-          <div className="text-[7.5px] font-mono text-[#3A4555] uppercase tracking-wider mb-0.5">Cache Age</div>
-          <div className="text-[8.5px] font-mono text-[#6B7280]">{feed.cacheAgeMs < 1000 ? "fresh" : formatAge(Date.now() - feed.cacheAgeMs)}</div>
+          <div className="text-[7.5px] font-mono text-[#4A5568] uppercase tracking-wider mb-0.5">Cache Age</div>
+          <div className="text-[8.5px] font-mono text-[#8A9DB0]">{feed.cacheAgeMs < 1000 ? "fresh" : formatAge(Date.now() - feed.cacheAgeMs)}</div>
         </div>
       </div>
 
       {/* Packet ID */}
       <div>
-        <div className="text-[7.5px] font-mono text-[#3A4555] uppercase tracking-wider mb-0.5">Source Packet</div>
-        <div className="text-[8px] font-mono text-[#4A5568] break-all">{feed.packetId}</div>
+        <div className="text-[7.5px] font-mono text-[#4A5568] uppercase tracking-wider mb-0.5">Source Packet</div>
+        <div className="text-[8px] font-mono text-[#6B7280] break-all">{feed.packetId}</div>
       </div>
 
       {/* Context */}
       <div>
-        <div className="text-[7.5px] font-mono text-[#3A4555] uppercase tracking-wider mb-0.5">Chain of Custody</div>
-        <div className="text-[8px] font-mono text-[#5A6575] leading-relaxed">{feed.context}</div>
+        <div className="text-[7.5px] font-mono text-[#4A5568] uppercase tracking-wider mb-0.5">Chain of Custody</div>
+        <div className="text-[8px] font-mono text-[#8A9DB0] leading-relaxed">{feed.context}</div>
       </div>
 
       {/* Error */}
@@ -187,8 +187,8 @@ function DimensionRow({
             {/* Row header */}
             <div className="flex items-center justify-between mb-1.5">
               <div className="flex items-center space-x-2 min-w-0">
-                <span className="text-[9px] font-mono text-[#3A4555] w-4 shrink-0">{String(index + 1).padStart(2, "0")}</span>
-                <span className="text-[10px] font-mono font-medium text-[#8A95A3] truncate">{dim.name}</span>
+                <span className="text-[9px] font-mono text-[#4A5568] w-4 shrink-0">{String(index + 1).padStart(2, "0")}</span>
+                <span className="text-[10px] font-mono font-medium text-[#A8B4C0] truncate">{dim.name}</span>
               </div>
               <div className="flex items-center space-x-2 shrink-0 ml-2">
                 {feed && <FeedStatusBadge status={feed.status} />}
@@ -209,7 +209,7 @@ function DimensionRow({
             </div>
 
             {/* Signal text */}
-            <div className="text-[8.5px] font-mono text-[#3A4555] group-hover:text-[#5A6575] transition-colors leading-relaxed">
+            <div className="text-[8.5px] font-mono text-[#6B7A88] group-hover:text-[#90A0B0] transition-colors leading-relaxed">
               {dim.signal}
             </div>
           </div>
@@ -236,7 +236,7 @@ function DimensionRow({
                 className="overflow-hidden"
               >
                 <div className="mx-3 mb-2 px-3 py-2 rounded border border-white/[0.04] bg-white/[0.02]">
-                  <div className="text-[8px] font-mono text-[#3A4555]">No authority feed mapped for dimension <span className="text-[#6B7280]">{dim.id}</span></div>
+                  <div className="text-[8px] font-mono text-[#5A6575]">No authority feed mapped for dimension <span className="text-[#8A9DB0]">{dim.id}</span></div>
                 </div>
               </motion.div>
             )}
@@ -276,7 +276,7 @@ function SyntheticRow({ index }: { index: number }) {
     >
       <div className="flex items-baseline justify-between mb-1">
         <div className="flex items-baseline space-x-2.5">
-          <span className="text-[9px] font-mono text-[#2A3545] w-4 shrink-0">{String(index + 11).padStart(2, "0")}</span>
+          <span className="text-[9px] font-mono text-[#3A4555] w-4 shrink-0">{String(index + 11).padStart(2, "0")}</span>
           <span className="text-[9px] font-mono text-[#4A5568]">{name}</span>
         </div>
         <span className="text-[9px] font-mono text-[#3A4555]">{contrib.toFixed(1)}%</span>
@@ -328,7 +328,6 @@ function FeedsLegend({ feeds }: { feeds: FeedRecord[] }) {
 export default function DimensionStack({ dimensions, loading, rapidsCompression, feeds = [] }: DimensionStackProps) {
   const [expandLevel, setExpandLevel] = useState<ExpandLevel>(10);
 
-  // Build a lookup map from feed id → FeedRecord
   const feedMap = new Map<string, FeedRecord>(feeds.map((f) => [f.id, f]));
 
   const extraCount = expandLevel > 10 ? Math.min(expandLevel - 10, 30) : 0;
@@ -338,7 +337,7 @@ export default function DimensionStack({ dimensions, loading, rapidsCompression,
       {/* Header */}
       <div className="px-4 py-3 border-b border-white/[0.04] flex items-center justify-between shrink-0">
         <div className="flex items-center space-x-2">
-          <span className="text-[9px] font-mono font-bold tracking-[0.2em] text-[#4A5568] uppercase">DIMENSIONS</span>
+          <span className="text-[9px] font-mono font-bold tracking-[0.2em] text-[#6B7280] uppercase">DIMENSIONS</span>
           {loading && <span className="text-[8px] font-mono text-[#E0AF68] animate-pulse">RAPIDS ↓</span>}
         </div>
         <div className="flex items-center space-x-2">
@@ -351,7 +350,7 @@ export default function DimensionStack({ dimensions, loading, rapidsCompression,
                 className={`text-[8px] font-mono cursor-pointer px-1.5 py-0.5 rounded transition-all ${
                   expandLevel === level
                     ? "text-[#E0AF68] bg-[#E0AF68]/10"
-                    : "text-[#3A4555] hover:text-[#6B7280]"
+                    : "text-[#5A6575] hover:text-[#8A9DB0]"
                 }`}
               >
                 {level}
@@ -394,12 +393,12 @@ export default function DimensionStack({ dimensions, loading, rapidsCompression,
 
       {/* RAPIDS compression footer */}
       <div className="px-4 py-2.5 border-t border-white/[0.04] shrink-0">
-        <div className="text-[8px] font-mono text-[#3A4555] leading-relaxed">
-          <span className="text-[#E0AF68]/40 mr-1.5">RAPIDS</span>
+        <div className="text-[8px] font-mono text-[#5A6575] leading-relaxed">
+          <span className="text-[#E0AF68]/50 mr-1.5">RAPIDS</span>
           {rapidsCompression || "awaiting field data"}
         </div>
         {feeds.length > 0 && (
-          <div className="text-[7px] font-mono text-[#2A3545] mt-0.5">
+          <div className="text-[7px] font-mono text-[#4A5568] mt-0.5">
             Click any dimension to inspect authority chain
           </div>
         )}

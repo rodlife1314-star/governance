@@ -38,7 +38,7 @@ export default function OperatorChannel({ liveFeed, pattern, findings, onSealObs
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleSeal(); }}
             placeholder="What do you observe? Your judgment takes precedent over the system."
-            className="w-full bg-transparent border-none outline-none text-[10.5px] font-mono text-[#8A95A3] placeholder-[#2A3545] resize-none leading-relaxed"
+            className="w-full bg-transparent border-none outline-none text-[10.5px] font-mono text-[#C4CDD8] placeholder-[#3A4555] resize-none leading-relaxed"
             style={{ minHeight: "2.5rem", maxHeight: "5rem" }}
             rows={2}
             disabled={sealing}
@@ -48,7 +48,7 @@ export default function OperatorChannel({ liveFeed, pattern, findings, onSealObs
         {/* Seal */}
         <div className="flex items-center gap-2 shrink-0 self-end md:self-center pb-0.5 md:pb-0">
           {text.length > 0 && (
-            <span className="hidden md:inline text-[8px] font-mono text-[#3A4555]">⌘↵ seal</span>
+            <span className="hidden md:inline text-[8px] font-mono text-[#5A6575]">⌘↵ seal</span>
           )}
           <AnimatePresence mode="wait">
             {sealed ? (

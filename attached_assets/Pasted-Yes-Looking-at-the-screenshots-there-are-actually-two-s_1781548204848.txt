@@ -1,0 +1,148 @@
+Yes. Looking at the screenshots, there are actually two separate issues:
+
+1. Box 05 is structurally out of sequence
+
+You identified it correctly.
+
+Current flow:
+
+01 Observation
+02 RAPIDS Compression
+05 SIMON Meanings
+04 Active Dimensions
+06 Operator Actuation
+
+That is backwards.
+
+The cognitive chain should be:
+
+01 Observation
+02 RAPIDS Compression
+03 Spatial Manifold
+04 Active Dimensions
+05 SIMON Meanings
+06 Operator Actuation
+07 Audit
+
+The operator should:
+
+1. Observe
+2. Compress
+3. Visualise
+4. Inspect dimensions
+5. Extract meaning
+6. Make judgement
+7. Seal
+
+Right now SIMON is appearing before the operator has finished reviewing the dimensional evidence.
+
+⸻
+
+2. Contrast is too low
+
+This is the bigger usability problem.
+
+Looking at your screenshots:
+
+* Dark navy background
+* Dark blue headings
+* Dark grey body text
+* Light grey cards
+
+On a desktop monitor it looks “sophisticated.”
+
+On an iPhone:
+
+Sophisticated = unreadable
+
+The text is failing the practical test.
+
+Specifically:
+
+* Section headers are too dark.
+* Body copy is too dark.
+* Blue tags are almost invisible.
+* SIMON findings are hard to read.
+* RAPIDS explanation text disappears into the background.
+
+⸻
+
+Immediate CSS fixes
+
+Increase contrast:
+
+--text-primary: #E8EDF5;
+--text-secondary: #C8D0DB;
+--text-muted: #AAB4C2;
+
+Section titles:
+
+font-weight: 600;
+letter-spacing: 0.08em;
+
+Body copy:
+
+opacity: 1;
+
+Remove:
+
+opacity: 0.6
+opacity: 0.5
+opacity: 0.4
+
+from informational text.
+
+⸻
+
+Third observation
+
+The tags:
+
+MACRO LIQUIDITY
+INTEREST RATE MATRIX
+INSTITUTIONAL FLOWS
+
+are visually overpowering the actual data.
+
+My eye should land on:
+
+DXY
+101.49
+
+not:
+
+MACRO LIQUIDITY
+
+The hierarchy is inverted.
+
+Suggested:
+
+DXY
+101.49
+Macro Liquidity
+
+Small label underneath.
+
+⸻
+
+What I would tell the builder
+
+Pathfinder Instrument Review
+
+1. Move Section 05 (SIMON Meanings) below Section 04 (Active Dimensions) and immediately above Section 06 (Operator Actuation). The evidence chain must flow:
+
+Observation → Compression → Spatial View → Active Dimensions → Meaning Extraction → Operator Decision → Ledger Seal.
+
+2. Increase contrast across the entire instrument. Current typography is too faint on mobile devices. Prioritize readability over aesthetic subtlety.
+3. Promote data and demote labels. Values such as DXY, RYLD, INST, and their live readings should be the visual focus. Classification tags should become secondary metadata.
+4. Remove low-opacity body text. Most explanatory copy appears visually disabled despite being active content.
+5. Keep the live plumbing. The live authority migration appears structurally correct and the dimension cards are now carrying meaningful information. The issue is presentation and sequencing, not data architecture.
+
+Current assessment:
+
+Plumbing: Strong.
+Cognitive flow: Mostly correct.
+Visual hierarchy: Needs refinement.
+Mobile readability: Needs immediate attention.
+
+From the screenshots, Rod, the underlying architecture now looks much stronger than the original version. What remains is mostly operator ergonomics: ordering, contrast, and visual hierarchy. Those are usually easier fixes than getting the live authority plumbing working in the first place.

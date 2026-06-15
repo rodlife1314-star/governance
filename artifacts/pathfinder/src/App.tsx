@@ -300,14 +300,14 @@ export default function App() {
           >
             {/* Mobile sub-tab bar */}
             <div className="md:hidden flex border-b border-white/[0.04] shrink-0 bg-[#07080B]">
-              {([["field", "FIELD"], ["dims", "DIMENSIONS"], ["intel", "INTEL"]] as [AugmentTab, string][]).map(([id, label]) => (
+              {([["field", "LENS"], ["dims", "DIMS"], ["intel", "FINDINGS"]] as [AugmentTab, string][]).map(([id, label]) => (
                 <button
                   key={id}
                   onClick={() => setAugmentTab(id)}
                   className={`flex-1 py-2.5 text-[9px] font-mono font-bold tracking-[0.2em] transition-all cursor-pointer border-b-2 ${
                     augmentTab === id
                       ? "text-white border-[#E0AF68]"
-                      : "text-[#3A4555] border-transparent hover:text-[#6B7280]"
+                      : "text-[#5A6575] border-transparent hover:text-[#8A9DB0]"
                   }`}
                 >
                   {label}
@@ -380,7 +380,13 @@ export default function App() {
           >
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div>
-                <div className="text-[9px] font-mono tracking-[0.25em] text-[#4A5568] uppercase mb-1">ARCHIVE</div>
+                <button
+                  onClick={() => setMode("augment")}
+                  className="text-[8px] font-mono text-[#5A6575] hover:text-[#E0AF68] transition-colors cursor-pointer mb-1.5 flex items-center gap-1"
+                >
+                  ← INSTRUMENT
+                </button>
+                <div className="text-[9px] font-mono tracking-[0.25em] text-[#6B7280] uppercase mb-1">ARCHIVE</div>
                 <div className="text-sm font-mono font-semibold text-white">Sovereign Observation Ledger</div>
               </div>
               <div className="flex items-center space-x-2">
@@ -395,7 +401,7 @@ export default function App() {
 
             <div className="space-y-2">
               {filteredAudits.length === 0 ? (
-                <div className="py-16 text-center text-[10px] font-mono text-[#3A4555]">
+                <div className="py-16 text-center text-[10px] font-mono text-[#6B7280]">
                   No observations sealed yet. Return to AUGMENT and use the operator channel.
                 </div>
               ) : filteredAudits.map((a) => (
@@ -415,8 +421,8 @@ export default function App() {
                   </div>
                   <div className="space-y-1">
                     {(a.logs || []).map((log, i) => (
-                      <div key={i} className="text-[9px] font-mono text-[#5A6575] leading-relaxed">
-                        {i === 0 ? <span className="text-[#8A95A3]">{log}</span> : <span className="text-[#3A4555]">{log}</span>}
+                      <div key={i} className="text-[9px] font-mono leading-relaxed">
+                        {i === 0 ? <span className="text-[#C4CDD8]">{log}</span> : <span className="text-[#6B7280]">{log}</span>}
                       </div>
                     ))}
                   </div>
@@ -434,15 +440,27 @@ export default function App() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.25 }}
-            className="flex-1 flex overflow-hidden"
+            className="flex-1 flex flex-col overflow-hidden"
           >
-            <ActionPanel
-              liveFeed={liveFeed}
-              analysis={analysis}
-              auditRecords={auditRecords}
-              auditLoading={auditLoading}
-              onFetchAudits={fetchAudits}
-            />
+            {/* Back nav */}
+            <div className="shrink-0 px-4 md:px-5 py-2 border-b border-white/[0.04] flex items-center">
+              <button
+                onClick={() => setMode("augment")}
+                className="text-[8px] font-mono text-[#5A6575] hover:text-[#E0AF68] transition-colors cursor-pointer flex items-center gap-1"
+              >
+                ← INSTRUMENT
+              </button>
+              <div className="ml-3 text-[9px] font-mono tracking-[0.2em] text-[#4A5568] uppercase">ACTION</div>
+            </div>
+            <div className="flex-1 flex overflow-hidden">
+              <ActionPanel
+                liveFeed={liveFeed}
+                analysis={analysis}
+                auditRecords={auditRecords}
+                auditLoading={auditLoading}
+                onFetchAudits={fetchAudits}
+              />
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

@@ -69,7 +69,7 @@ export default function ActionPanel({
       {/* Current State bar */}
       <div className="border-b border-white/[0.04] px-4 md:px-5 py-3 md:py-4 flex items-start justify-between gap-4 shrink-0">
         <div className="space-y-1 min-w-0">
-          <div className="text-[9px] font-mono tracking-[0.25em] text-[#4A5568] uppercase">Current State</div>
+          <div className="text-[9px] font-mono tracking-[0.25em] text-[#6B7280] uppercase">Current State</div>
           {liveFeed ? (
             <div className="flex items-center gap-2 font-mono flex-wrap">
               <span className="text-[11px] font-bold text-white">
@@ -80,14 +80,14 @@ export default function ActionPanel({
                   {basis! >= 0 ? "+" : ""}{basis!.toFixed(0)} {structure}
                 </span>
               )}
-              <span className="text-[9px] text-[#4A5568]">·</span>
-              <span className="text-[9px] text-[#6B7280]">{liveFeed.source}</span>
+              <span className="text-[9px] text-[#6B7280]">·</span>
+              <span className="text-[9px] text-[#8A9DB0]">{liveFeed.source}</span>
             </div>
           ) : (
-            <div className="text-[9px] font-mono text-[#4A5568]">Field acquiring…</div>
+            <div className="text-[9px] font-mono text-[#6B7280]">Field acquiring…</div>
           )}
           {analysis?.pattern && (
-            <div className="text-[9px] font-mono text-[#6B7280] leading-relaxed max-w-lg">
+            <div className="text-[9px] font-mono text-[#9BA5B3] leading-relaxed max-w-lg">
               {analysis.pattern}
             </div>
           )}
@@ -96,7 +96,7 @@ export default function ActionPanel({
           <div className="shrink-0 hidden sm:flex items-center gap-4">
             {topDimensions.map(d => (
               <div key={d.name} className="text-right">
-                <div className="text-[8px] font-mono text-[#4A5568] uppercase tracking-wider">{d.name.split("/")[0].trim()}</div>
+                <div className="text-[8px] font-mono text-[#6B7280] uppercase tracking-wider">{d.name.split("/")[0].trim()}</div>
                 <div className={`text-[10px] font-mono font-bold ${d.contribution > 0 ? "text-emerald-400" : "text-rose-400"}`}>
                   {d.contribution > 0 ? "+" : ""}{d.contribution.toFixed(1)}%
                 </div>
@@ -109,7 +109,7 @@ export default function ActionPanel({
       {/* Queue header */}
       <div className="px-4 md:px-5 py-2.5 md:py-3 border-b border-white/[0.04] flex items-center justify-between shrink-0">
         <div>
-          <div className="text-[9px] font-mono tracking-[0.25em] text-[#4A5568] uppercase mb-0.5">Decision Queue</div>
+          <div className="text-[9px] font-mono tracking-[0.25em] text-[#6B7280] uppercase mb-0.5">Decision Queue</div>
           <div className="text-[10px] font-mono font-semibold text-white">
             {auditRecords.length} observation{auditRecords.length !== 1 ? "s" : ""} sealed
           </div>
@@ -117,7 +117,7 @@ export default function ActionPanel({
         <button
           onClick={onFetchAudits}
           disabled={auditLoading}
-          className="text-[8.5px] font-mono text-[#4A5568] hover:text-white transition-all border border-white/[0.04] px-2 py-1 rounded cursor-pointer"
+          className="text-[8.5px] font-mono text-[#5A6575] hover:text-white transition-all border border-white/[0.04] px-2 py-1 rounded cursor-pointer"
         >
           {auditLoading ? "SYNCING…" : "SYNC"}
         </button>
@@ -127,8 +127,8 @@ export default function ActionPanel({
       <div className="flex-1 overflow-y-auto px-4 md:px-5 py-3 md:py-4 space-y-2">
         {auditRecords.length === 0 ? (
           <div className="py-16 text-center space-y-2">
-            <div className="text-[10px] font-mono text-[#3A4555]">No observations sealed yet.</div>
-            <div className="text-[9px] font-mono text-[#2A3545]">
+            <div className="text-[10px] font-mono text-[#6B7280]">No observations sealed yet.</div>
+            <div className="text-[9px] font-mono text-[#5A6575]">
               Go to AUGMENT → OPERATOR CHANNEL.<br />
               Seal an observation to begin the governance chain.
             </div>
@@ -155,14 +155,14 @@ export default function ActionPanel({
                     ) : (
                       <span className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded border border-amber-500/20 bg-amber-500/8 text-amber-400">PENDING</span>
                     )}
-                    <span className="text-[9px] font-mono text-[#4A5568]">{obs.id}</span>
+                    <span className="text-[9px] font-mono text-[#6B7280]">{obs.id}</span>
                   </div>
-                  <div className="text-right text-[9px] font-mono text-[#3A4555] shrink-0">
+                  <div className="text-right text-[9px] font-mono text-[#5A6575] shrink-0">
                     {new Date(obs.createdAt).toLocaleTimeString()}
                   </div>
                 </div>
 
-                <div className="text-[9.5px] font-mono text-[#8A95A3] leading-relaxed mb-2">
+                <div className="text-[9.5px] font-mono text-[#C4CDD8] leading-relaxed mb-2">
                   {obs.logs[0] || "No operator note."}
                 </div>
 
@@ -175,14 +175,14 @@ export default function ActionPanel({
                       className="overflow-hidden"
                     >
                       <div className="pt-2 border-t border-white/[0.04] space-y-2">
-                        <div className="text-[8.5px] font-mono text-[#4A5568] uppercase tracking-wider">Route this observation</div>
+                        <div className="text-[8.5px] font-mono text-[#6B7280] uppercase tracking-wider">Route this observation</div>
                         <div className="flex items-center gap-2 flex-wrap">
                           {(["ARCHIVE", "ESCALATE", "INVESTIGATE", "DISMISSED"] as Route[]).map((rt) => (
                             <button
                               key={rt}
                               onClick={(e) => { e.stopPropagation(); route(obs.id, rt); }}
                               className={`text-[8px] font-mono font-bold px-2 py-1 rounded border cursor-pointer transition-all ${
-                                r === rt ? ROUTE_STYLES[rt] : "border-white/[0.06] text-[#4A5568] hover:text-white hover:border-white/[0.12]"
+                                r === rt ? ROUTE_STYLES[rt] : "border-white/[0.06] text-[#5A6575] hover:text-white hover:border-white/[0.12]"
                               }`}
                             >
                               → {rt}
@@ -205,13 +205,13 @@ export default function ActionPanel({
     <div className="flex flex-col overflow-y-auto">
       {/* Impact */}
       <div className="border-b border-white/[0.04] px-4 md:px-5 py-4 md:py-5 space-y-3">
-        <div className="text-[9px] font-mono tracking-[0.25em] text-[#4A5568] uppercase">Impact</div>
+        <div className="text-[9px] font-mono tracking-[0.25em] text-[#6B7280] uppercase">Impact</div>
         {selectedObs && selectedRoute ? (
           <div className="space-y-2">
             <div className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded border w-fit ${ROUTE_STYLES[selectedRoute]}`}>
               {selectedRoute}
             </div>
-            <div className="space-y-1.5 text-[9px] font-mono text-[#5A6575]">
+            <div className="space-y-1.5 text-[9px] font-mono text-[#8A9DB0]">
               {selectedRoute === "ARCHIVE" && <><div>→ Preserved in sovereign ledger</div><div>→ Authority chain recorded</div><div>→ Operator signature applied</div></>}
               {selectedRoute === "ESCALATE" && <><div>→ Flagged for senior review</div><div>→ Observation elevated in ledger</div><div>→ Authority notification queued</div></>}
               {selectedRoute === "INVESTIGATE" && <><div>→ Queued for deeper analysis</div><div>→ Pattern comparison triggered</div><div>→ RAPIDS re-evaluation requested</div></>}
@@ -219,7 +219,7 @@ export default function ActionPanel({
             </div>
           </div>
         ) : (
-          <div className="text-[9px] font-mono text-[#3A4555]">
+          <div className="text-[9px] font-mono text-[#6B7280]">
             {selectedObs ? "Select a route to see impact." : "Select an observation to route it."}
           </div>
         )}
@@ -227,7 +227,7 @@ export default function ActionPanel({
 
       {/* Governance chain */}
       <div className="border-b border-white/[0.04] px-4 md:px-5 py-4 md:py-5 space-y-3">
-        <div className="text-[9px] font-mono tracking-[0.25em] text-[#4A5568] uppercase">Governance Chain</div>
+        <div className="text-[9px] font-mono tracking-[0.25em] text-[#6B7280] uppercase">Governance Chain</div>
         {[
           { label: "OBSERVATION", desc: "Operator sees" },
           { label: "AUTHORITY",   desc: "Truth validated" },
@@ -237,12 +237,12 @@ export default function ActionPanel({
         ].map((step, i, arr) => (
           <div key={step.label} className="flex items-start gap-3">
             <div className="flex flex-col items-center shrink-0">
-              <div className="w-1.5 h-1.5 rounded-full bg-[#2A3545] mt-0.5" />
+              <div className="w-1.5 h-1.5 rounded-full bg-[#3A4555] mt-0.5" />
               {i < arr.length - 1 && <div className="w-px h-5 bg-white/[0.04] mt-1" />}
             </div>
             <div>
-              <div className="text-[8.5px] font-mono font-bold text-[#6B7280] tracking-wider">{step.label}</div>
-              <div className="text-[8px] font-mono text-[#3A4555]">{step.desc}</div>
+              <div className="text-[8.5px] font-mono font-bold text-[#9BA5B3] tracking-wider">{step.label}</div>
+              <div className="text-[8px] font-mono text-[#6B7280]">{step.desc}</div>
             </div>
           </div>
         ))}
@@ -250,15 +250,15 @@ export default function ActionPanel({
 
       {/* Principles */}
       <div className="px-4 md:px-5 py-4 md:py-5 space-y-3">
-        <div className="text-[9px] font-mono tracking-[0.25em] text-[#4A5568] uppercase">Principles</div>
+        <div className="text-[9px] font-mono tracking-[0.25em] text-[#6B7280] uppercase">Principles</div>
         {PRINCIPLES.map((p, i) => (
           <div key={i} className="flex items-start gap-3">
-            <span className="text-[8px] font-mono text-[#2A3545] shrink-0 mt-[1px]">{String(i + 1).padStart(2, "0")}</span>
-            <span className="text-[9px] font-mono text-[#4A5568] leading-relaxed">{p}</span>
+            <span className="text-[8px] font-mono text-[#4A5568] shrink-0 mt-[1px]">{String(i + 1).padStart(2, "0")}</span>
+            <span className="text-[9px] font-mono text-[#8A9DB0] leading-relaxed">{p}</span>
           </div>
         ))}
         <div className="pt-3 border-t border-white/[0.03]">
-          <div className="text-[8px] font-mono text-[#2A3545] leading-relaxed italic">
+          <div className="text-[8px] font-mono text-[#5A6575] leading-relaxed italic">
             The system does not replace judgement.<br />
             It augments judgement through structure.
           </div>
@@ -288,7 +288,7 @@ export default function ActionPanel({
               key={id}
               onClick={() => setMobileTab(id)}
               className={`flex-1 py-2.5 text-[9px] font-mono font-bold tracking-[0.2em] cursor-pointer transition-all border-b-2 ${
-                mobileTab === id ? "text-white border-[#E0AF68]" : "text-[#3A4555] border-transparent hover:text-[#6B7280]"
+                mobileTab === id ? "text-white border-[#E0AF68]" : "text-[#5A6575] border-transparent hover:text-[#8A9DB0]"
               }`}
             >
               {label}

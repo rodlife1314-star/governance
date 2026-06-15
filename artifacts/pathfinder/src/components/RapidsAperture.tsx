@@ -68,7 +68,7 @@ export default function RapidsAperture({ dimensions, loading, rapidsCompression 
     <div className="flex flex-col items-center justify-center h-full bg-[#07080B] px-2 py-4 md:px-4 md:py-6 relative" id="rapids-aperture">
       {/* Title */}
       <div className="absolute top-3 left-0 right-0 flex items-center justify-center">
-        <span className="text-[8px] font-mono tracking-[0.3em] text-[#3A4555] uppercase">RAPIDS LENS</span>
+        <span className="text-[8px] font-mono tracking-[0.3em] text-[#5A6575] uppercase">RAPIDS LENS</span>
       </div>
 
       {/* Responsive SVG container */}
@@ -188,7 +188,7 @@ export default function RapidsAperture({ dimensions, loading, rapidsCompression 
           {Array.from({ length: N }, (_, i) => {
             const labelR = OUTER_R + 16;
             const p = polarToCart(CX, CY, labelR, angle(i));
-            const color = !loading && dimensions[i] ? DIR_COLOR[dimensions[i].direction] : "#3A4555";
+            const color = !loading && dimensions[i] ? DIR_COLOR[dimensions[i].direction] : "#4A5568";
             return (
               <text
                 key={i}
@@ -222,14 +222,14 @@ export default function RapidsAperture({ dimensions, loading, rapidsCompression 
           {loading ? (
             <div className="text-[8px] font-mono text-[#E0AF68]/50 tracking-[0.3em] animate-pulse">COMPUTING</div>
           ) : dimensions.length === 0 ? (
-            <div className="text-[8px] font-mono text-[#3A4555] tracking-[0.3em]">ACQUIRING</div>
+            <div className="text-[8px] font-mono text-[#5A6575] tracking-[0.3em]">ACQUIRING</div>
           ) : null}
         </div>
       </div>
 
       {rapidsCompression && (
         <div className="absolute bottom-3 left-0 right-0 flex justify-center">
-          <div className="text-[8px] font-mono text-[#3A4555] tracking-wider text-center max-w-xs px-4 leading-relaxed">
+          <div className="text-[8px] font-mono text-[#6B7280] tracking-wider text-center max-w-xs px-4 leading-relaxed">
             {rapidsCompression}
           </div>
         </div>

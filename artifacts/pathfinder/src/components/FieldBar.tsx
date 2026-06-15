@@ -107,7 +107,7 @@ export default function FieldBar({
                 key={m.id}
                 onClick={() => setMode(m.id)}
                 className={`px-2 md:px-3 py-1 rounded-md text-[8px] md:text-[9px] font-mono font-bold tracking-wider cursor-pointer transition-all ${
-                  mode === m.id ? "bg-[#151820] text-white" : "text-[#3A4555] hover:text-[#6B7280]"
+                  mode === m.id ? "bg-[#151820] text-white" : "text-[#5A6575] hover:text-[#9BA5B3]"
                 }`}
               >
                 {m.label}
@@ -117,7 +117,7 @@ export default function FieldBar({
           <button
             onClick={onRefresh}
             disabled={feedLoading}
-            className="hidden md:flex items-center space-x-1.5 text-[9px] font-mono text-[#3A4555] hover:text-[#6B7280] cursor-pointer transition-all"
+            className="hidden md:flex items-center space-x-1.5 text-[9px] font-mono text-[#5A6575] hover:text-[#8A9DB0] cursor-pointer transition-all"
           >
             <Zap className={`w-3 h-3 ${feedLoading ? "text-[#E0AF68] animate-pulse" : ""}`} />
             <span>REFRESH</span>
@@ -137,7 +137,7 @@ export default function FieldBar({
               className={`shrink-0 px-2 py-1 rounded text-[8px] font-mono font-bold tracking-wider cursor-pointer transition-all border ${
                 selectedAsset === a.id
                   ? "border-[#E0AF68]/40 bg-[#E0AF68]/10 text-[#E0AF68]"
-                  : "border-white/[0.04] text-[#3A4555] hover:text-[#6B7280]"
+                  : "border-white/[0.04] text-[#5A6575] hover:text-[#8A9DB0]"
               }`}
             >
               {a.id}
@@ -167,7 +167,7 @@ export default function FieldBar({
           <button
             onClick={onRefresh}
             disabled={feedLoading}
-            className="text-[#3A4555] hover:text-[#6B7280] cursor-pointer transition-all"
+            className="text-[#5A6575] hover:text-[#8A9DB0] cursor-pointer transition-all"
           >
             <Zap className={`w-3.5 h-3.5 ${feedLoading ? "text-[#E0AF68] animate-pulse" : ""}`} />
           </button>
@@ -176,7 +176,7 @@ export default function FieldBar({
 
       {/* ── Desktop: Asset selector row ── */}
       <div className="hidden md:flex items-center gap-1.5 px-6 pb-2.5 pt-0">
-        <span className="text-[8px] font-mono text-[#2A3545] tracking-wider uppercase mr-1">Instrument</span>
+        <span className="text-[8px] font-mono text-[#4A5568] tracking-wider uppercase mr-1">Instrument</span>
         {ASSETS.map((a) => (
           <button
             key={a.id}
@@ -184,7 +184,7 @@ export default function FieldBar({
             className={`px-2 py-0.5 rounded text-[8px] font-mono font-bold tracking-wider cursor-pointer transition-all border ${
               selectedAsset === a.id
                 ? "border-[#E0AF68]/40 bg-[#E0AF68]/10 text-[#E0AF68]"
-                : "border-white/[0.04] text-[#3A4555] hover:text-[#6B7280]"
+                : "border-white/[0.04] text-[#5A6575] hover:text-[#8A9DB0]"
             }`}
           >
             {a.id} <span className="opacity-50 font-normal">{a.label}</span>
