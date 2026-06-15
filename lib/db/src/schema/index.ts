@@ -3,3 +3,4 @@ export * from "./doctrine";
 export * from "./workflows";
 export * from "./routing";
 export * from "./scenarios";
+export * from "./sovereign";

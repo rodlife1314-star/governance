@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/pathfinder/"
+title = "Pathfinder Governance"
+version = "1.0.0"
+id = "artifacts/pathfinder"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/pathfinder/" ]
+localPort = 20822
+
+[services.development]
+run = "pnpm --filter @workspace/pathfinder run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/pathfinder", "run", "build" ]
+publicDir = "artifacts/pathfinder/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "20822"
+BASE_PATH = "/pathfinder/"

@@ -6,6 +6,8 @@ import workflowsRouter from "./workflows";
 import routingRouter from "./routing";
 import scenariosRouter from "./scenarios";
 import dashboardRouter from "./dashboard";
+import sovereignRouter from "./sovereign";
+import geminiRouter from "./gemini";
 
 const router: IRouter = Router();
 
@@ -16,5 +18,7 @@ router.use(workflowsRouter);
 router.use(routingRouter);
 router.use(scenariosRouter);
 router.use(dashboardRouter);
+router.use(sovereignRouter);
+router.use(geminiRouter);
 
 export default router;
