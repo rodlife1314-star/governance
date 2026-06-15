@@ -19,6 +19,14 @@ export interface DimensionalAnalysis {
   rapidsCompression: string;
 }
 
+export interface ObservationAnalysis extends DimensionalAnalysis {
+  rawObservation: string;
+  inferredDomain: string;
+  inferredDomainFull: string;
+  confidence: number;
+  suggestedActions: string[];
+}
+
 export interface LiveFeedData {
   coinbaseSpotPrice: string;
   cmeFuturePrice: string;

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getAbsoluteUrl } from "./utils";
-import { LiveFeedData, DimensionalAnalysis, FeedRecord, Finding } from "./augment-types";
+import { LiveFeedData, DimensionalAnalysis, FeedRecord, Finding, ObservationAnalysis } from "./augment-types";
 import { AssetId, ASSETS, getAsset, generateMockFeed } from "./assets";
 import { DomainId, getDomain } from "./domains";
 
@@ -12,6 +12,8 @@ import SimonPanel from "./components/SimonPanel";
 import OperatorChannel from "./components/OperatorChannel";
 import ActionPanel from "./components/ActionPanel";
 import DomainStandby from "./components/DomainStandby";
+import ObservationAperture from "./components/ObservationAperture";
+import ObservationResult from "./components/ObservationResult";
 
 type Mode = "augment" | "archive" | "action";
 type AugmentTab = "field" | "dims" | "intel";
@@ -32,7 +34,16 @@ interface AuditRecord {
   divergenceDelta: number;
 }
 
+type AppState = "aperture" | "analyzing" | "result" | "field";
+
 export default function App() {
+  // ── Top-level app state ────────────────────────────────────────────────────
+  const [appState, setAppState] = useState<AppState>("aperture");
+  const [rawObservation, setRawObservation] = useState("");
+  const [observationAnalysis, setObservationAnalysis] = useState<ObservationAnalysis | null>(null);
+  const fieldEnteredRef = useRef(false);
+
+  // ── Field mode state ───────────────────────────────────────────────────────
   const [mode, setMode] = useState<Mode>("augment");
   const [selectedAsset, setSelectedAsset] = useState<AssetId>("BTC");
   const [selectedDomain, setSelectedDomain] = useState<DomainId>("FINANCE");
@@ -240,16 +251,77 @@ export default function App() {
     if (feed) triggerAnalysis(feed, id);
   }, [fetchLiveFeed, triggerAnalysis, stopPolling, fetchDimensionFeeds]);
 
+  // ── Observation submit (Level 0 → analysis) ───────────────────────────────
+
+  const handleObservationSubmit = useCallback(async (text: string) => {
+    setRawObservation(text);
+    setAppState("analyzing");
+    try {
+      const res = await fetch(getAbsoluteUrl("/api/observe"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ observation: text }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setObservationAnalysis(data as ObservationAnalysis);
+        setAppState("result");
+      } else {
+        setAppState("aperture");
+      }
+    } catch {
+      setAppState("aperture");
+    }
+  }, []);
+
+  // ── Observation seal (from result view) ───────────────────────────────────
+
+  const handleObservationSeal = useCallback(async (observationText: string) => {
+    if (sealing) return;
+    setSealing(true);
+    try {
+      await fetch(getAbsoluteUrl("/api/sovereign/audits"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id:              `OBS-${Date.now().toString(36).toUpperCase()}`,
+          authority:       observationAnalysis?.inferredDomainFull ?? "Pathfinder Observation",
+          asset:           observationAnalysis?.inferredDomain ?? "OBSERVATION",
+          price:           "0",
+          packetId:        `PKT-${Date.now().toString(36).toUpperCase()}`,
+          operatorEmail:   "operator@pathfinder.local",
+          logs: [
+            observationText,
+            `Pattern: ${observationAnalysis?.pattern || "none"}`,
+            `Domain: ${observationAnalysis?.inferredDomainFull || "none"}`,
+            `Confidence: ${observationAnalysis?.confidence ?? 0}%`,
+            `RAPIDS: ${observationAnalysis?.rapidsCompression || "none"}`,
+          ],
+          signature:        `OBS-SIG-${Date.now()}`,
+          verified:         true,
+          operatorDecision: "APPROVED",
+          divergenceState:  "ALIGNED",
+          divergenceDelta:  0,
+        }),
+      });
+      setSealedFlash(true);
+      setTimeout(() => setSealedFlash(false), 2500);
+    } catch { /* preserve flash state */ } finally { setSealing(false); }
+  }, [sealing, observationAnalysis]);
+
   // ── Lifecycle ─────────────────────────────────────────────────────────────
 
-  // Initial load
+  // Lazy-load field data the first time the operator enters direct field mode
   useEffect(() => {
+    if (appState !== "field") return;
+    if (fieldEnteredRef.current) return;
+    fieldEnteredRef.current = true;
     (async () => {
       const feed = await fetchLiveFeed("BTC");
-      if (feed) triggerAnalysis(feed, "BTC");
+      if (feed && selectedDomain === "FINANCE") triggerAnalysis(feed, "BTC");
       fetchDimensionFeeds("BTC");
     })();
-  }, []);
+  }, [appState]);
 
   // Cleanup on unmount
   useEffect(() => () => {
@@ -282,227 +354,296 @@ export default function App() {
 
   return (
     <div className="h-screen flex flex-col bg-[#07080B] text-white overflow-hidden" id="pathfinder-augment">
-      <FieldBar
-        liveFeed={liveFeed}
-        feedLoading={feedLoading}
-        analysisLoading={analysisLoading}
-        onRefresh={() => { fetchLiveFeed(); if (liveFeed) triggerAnalysis(liveFeed, selectedAsset); }}
-        mode={mode}
-        setMode={setMode}
-        selectedAsset={selectedAsset}
-        onAssetChange={handleAssetChange}
-        selectedDomain={selectedDomain}
-        onDomainChange={setSelectedDomain}
-      />
-
       <AnimatePresence mode="wait">
-        {/* AUGMENT */}
-        {mode === "augment" && (
+
+        {/* ── LEVEL 0: Observation aperture ─────────────────────────────────── */}
+        {appState === "aperture" && (
+          <ObservationAperture
+            key="aperture"
+            onSubmit={handleObservationSubmit}
+            onFieldMode={() => setAppState("field")}
+          />
+        )}
+
+        {/* ── ANALYZING: RAPIDS computing ───────────────────────────────────── */}
+        {appState === "analyzing" && (
           <motion.div
-            key="augment"
+            key="analyzing"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.25 }}
+            className="flex-1 flex flex-col items-center justify-center bg-[#07080B]"
+          >
+            <div className="text-center max-w-lg px-8">
+              <div className="text-[9px] font-mono text-[#E0AF68] tracking-[0.3em] uppercase mb-4">
+                RAPIDS · DISCOVERING DIMENSIONS
+              </div>
+              <div className="text-[11px] font-mono text-[#6B7B8E] leading-relaxed mb-8 italic">
+                "{rawObservation.length > 90 ? rawObservation.slice(0, 90) + "…" : rawObservation}"
+              </div>
+              <div className="flex items-center justify-center gap-2 mb-6">
+                {Array.from({ length: 10 }).map((_, i) => (
+                  <motion.div
+                    key={i}
+                    className="w-1 h-1 rounded-full bg-[#E0AF68]"
+                    animate={{ opacity: [0.15, 1, 0.15] }}
+                    transition={{ duration: 1.6, repeat: Infinity, delay: i * 0.16 }}
+                  />
+                ))}
+              </div>
+              <div className="text-[8px] font-mono text-[#3A4555] tracking-wider">
+                Inferring domain · Discovering dimensions · Compressing through RAPIDS
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* ── LEVELS 1–4: Observation result ────────────────────────────────── */}
+        {appState === "result" && observationAnalysis && (
+          <ObservationResult
+            key="result"
+            analysis={observationAnalysis}
+            onNewObservation={() => { setObservationAnalysis(null); setAppState("aperture"); }}
+            onSeal={handleObservationSeal}
+            sealing={sealing}
+            sealedFlash={sealedFlash}
+          />
+        )}
+
+        {/* ── FIELD: Direct market analysis (legacy path) ───────────────────── */}
+        {appState === "field" && (
+          <motion.div
+            key="field"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
             className="flex-1 flex flex-col overflow-hidden"
           >
+            <FieldBar
+              liveFeed={liveFeed}
+              feedLoading={feedLoading}
+              analysisLoading={analysisLoading}
+              onRefresh={() => { fetchLiveFeed(); if (liveFeed) triggerAnalysis(liveFeed, selectedAsset); }}
+              mode={mode}
+              setMode={setMode}
+              selectedAsset={selectedAsset}
+              onAssetChange={handleAssetChange}
+              selectedDomain={selectedDomain}
+              onDomainChange={setSelectedDomain}
+              onObserve={() => setAppState("aperture")}
+            />
+
             <AnimatePresence mode="wait">
-              {selectedDomain !== "FINANCE" ? (
-                /* ── Non-Finance domain: standby screen ── */
-                <DomainStandby key={selectedDomain} domain={getDomain(selectedDomain)} />
-              ) : (
-                /* ── Finance: full analysis instrument ── */
+              {/* AUGMENT */}
+              {mode === "augment" && (
                 <motion.div
-                  key="finance"
+                  key="augment"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  transition={{ duration: 0.2 }}
+                  transition={{ duration: 0.25 }}
                   className="flex-1 flex flex-col overflow-hidden"
                 >
-                  {/* Mobile sub-tab bar */}
-                  <div className="md:hidden flex border-b border-white/[0.04] shrink-0 bg-[#07080B]">
-                    {([["field", "LENS"], ["dims", "DIMS"], ["intel", "FINDINGS"]] as [AugmentTab, string][]).map(([id, label]) => (
-                      <button
-                        key={id}
-                        onClick={() => setAugmentTab(id)}
-                        className={`flex-1 py-2.5 text-[9px] font-mono font-bold tracking-[0.2em] transition-all cursor-pointer border-b-2 ${
-                          augmentTab === id
-                            ? "text-white border-[#E0AF68]"
-                            : "text-[#5A6575] border-transparent hover:text-[#8A9DB0]"
-                        }`}
+                  <AnimatePresence mode="wait">
+                    {selectedDomain !== "FINANCE" ? (
+                      <DomainStandby key={selectedDomain} domain={getDomain(selectedDomain)} />
+                    ) : (
+                      <motion.div
+                        key="finance"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="flex-1 flex flex-col overflow-hidden"
                       >
-                        {label}
+                        {/* Mobile sub-tab bar */}
+                        <div className="md:hidden flex border-b border-white/[0.04] shrink-0 bg-[#07080B]">
+                          {([["field", "LENS"], ["dims", "DIMS"], ["intel", "FINDINGS"]] as [AugmentTab, string][]).map(([id, label]) => (
+                            <button
+                              key={id}
+                              onClick={() => setAugmentTab(id)}
+                              className={`flex-1 py-2.5 text-[9px] font-mono font-bold tracking-[0.2em] transition-all cursor-pointer border-b-2 ${
+                                augmentTab === id
+                                  ? "text-white border-[#E0AF68]"
+                                  : "text-[#5A6575] border-transparent hover:text-[#8A9DB0]"
+                              }`}
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Desktop: 3-column grid */}
+                        <div
+                          className="hidden md:grid flex-1 overflow-hidden"
+                          style={{ gridTemplateColumns: "1fr 360px 340px" }}
+                        >
+                          <RapidsAperture
+                            dimensions={analysis?.dimensions || []}
+                            loading={analysisLoading}
+                            rapidsCompression={analysis?.rapidsCompression || ""}
+                          />
+                          <DimensionStack
+                            dimensions={analysis?.dimensions || []}
+                            loading={analysisLoading}
+                            rapidsCompression={analysis?.rapidsCompression || ""}
+                            feeds={dimensionFeeds}
+                          />
+                          <SimonPanel
+                            pattern={analysis?.pattern || ""}
+                            findings={analysis?.findings || []}
+                            simonSummary={analysis?.simonSummary || ""}
+                            loading={analysisLoading}
+                            dimensions={analysis?.dimensions || []}
+                          />
+                        </div>
+
+                        {/* Mobile: single panel */}
+                        <div className="md:hidden flex-1 overflow-hidden">
+                          {augmentTab === "field" && (
+                            <RapidsAperture
+                              dimensions={analysis?.dimensions || []}
+                              loading={analysisLoading}
+                              rapidsCompression={analysis?.rapidsCompression || ""}
+                            />
+                          )}
+                          {augmentTab === "dims" && (
+                            <DimensionStack
+                              dimensions={analysis?.dimensions || []}
+                              loading={analysisLoading}
+                              rapidsCompression={analysis?.rapidsCompression || ""}
+                              feeds={dimensionFeeds}
+                            />
+                          )}
+                          {augmentTab === "intel" && (
+                            <SimonPanel
+                              pattern={analysis?.pattern || ""}
+                              findings={analysis?.findings || []}
+                              simonSummary={analysis?.simonSummary || ""}
+                              loading={analysisLoading}
+                              dimensions={analysis?.dimensions || []}
+                            />
+                          )}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              )}
+
+              {/* ARCHIVE */}
+              {mode === "archive" && (
+                <motion.div
+                  key="archive"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.25 }}
+                  className="flex-1 overflow-y-auto px-4 md:px-6 py-5 space-y-4"
+                >
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div>
+                      <button
+                        onClick={() => setMode("augment")}
+                        className="text-[8px] font-mono text-[#5A6575] hover:text-[#E0AF68] transition-colors cursor-pointer mb-1.5 flex items-center gap-1"
+                      >
+                        ← INSTRUMENT
                       </button>
+                      <div className="text-[9px] font-mono tracking-[0.25em] text-[#6B7280] uppercase mb-1">ARCHIVE</div>
+                      <div className="text-sm font-mono font-semibold text-white">Sovereign Observation Ledger</div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      {(["ALL", "APPROVED", "REJECTED"] as const).map((f) => (
+                        <button key={f} onClick={() => setAuditFilter(f)} className={`text-[8.5px] font-mono font-bold px-2 py-1 rounded cursor-pointer transition-all border ${auditFilter === f ? "border-[#E0AF68]/30 bg-[#E0AF68]/8 text-[#E0AF68]" : "border-white/[0.04] text-[#4A5568] hover:text-white"}`}>{f}</button>
+                      ))}
+                      <button onClick={fetchAudits} disabled={auditLoading} className="text-[8.5px] font-mono text-[#4A5568] hover:text-white cursor-pointer transition-all border border-white/[0.04] px-2 py-1 rounded">
+                        {auditLoading ? "SYNCING..." : "SYNC"}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    {filteredAudits.length === 0 ? (
+                      <div className="py-16 text-center text-[10px] font-mono text-[#6B7280]">
+                        No observations sealed yet.
+                      </div>
+                    ) : filteredAudits.map((a) => (
+                      <div key={a.id} className="border border-white/[0.04] rounded-lg p-4 space-y-2 hover:border-white/[0.08] transition-all">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="space-y-0.5 min-w-0">
+                            <div className="flex items-center space-x-2 flex-wrap gap-1">
+                              <span className={`text-[8.5px] font-mono font-bold px-1.5 py-0.5 rounded border ${a.operatorDecision === "APPROVED" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-rose-500/10 text-rose-400 border-rose-500/20"}`}>{a.operatorDecision}</span>
+                              <span className="text-[9px] font-mono text-[#4A5568]">{a.id}</span>
+                            </div>
+                            <div className="text-[10.5px] font-mono font-semibold text-white">{a.asset} @ ${parseFloat(a.price).toLocaleString()}</div>
+                          </div>
+                          <div className="text-right text-[9px] font-mono text-[#4A5568] shrink-0">
+                            <div>{a.authority}</div>
+                            <div>{new Date(a.createdAt).toLocaleString()}</div>
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          {(a.logs || []).map((log, i) => (
+                            <div key={i} className="text-[9px] font-mono leading-relaxed">
+                              {i === 0 ? <span className="text-[#C4CDD8]">{log}</span> : <span className="text-[#6B7280]">{log}</span>}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     ))}
                   </div>
+                </motion.div>
+              )}
 
-                  {/* Desktop: 3-column grid */}
-                  <div
-                    className="hidden md:grid flex-1 overflow-hidden"
-                    style={{ gridTemplateColumns: "1fr 360px 340px" }}
-                  >
-                    <RapidsAperture
-                      dimensions={analysis?.dimensions || []}
-                      loading={analysisLoading}
-                      rapidsCompression={analysis?.rapidsCompression || ""}
-                    />
-                    <DimensionStack
-                      dimensions={analysis?.dimensions || []}
-                      loading={analysisLoading}
-                      rapidsCompression={analysis?.rapidsCompression || ""}
-                      feeds={dimensionFeeds}
-                    />
-                    <SimonPanel
-                      pattern={analysis?.pattern || ""}
-                      findings={analysis?.findings || []}
-                      simonSummary={analysis?.simonSummary || ""}
-                      loading={analysisLoading}
-                      dimensions={analysis?.dimensions || []}
-                    />
+              {/* ACTION */}
+              {mode === "action" && (
+                <motion.div
+                  key="action"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.25 }}
+                  className="flex-1 flex flex-col overflow-hidden"
+                >
+                  <div className="shrink-0 px-4 md:px-5 py-2 border-b border-white/[0.04] flex items-center">
+                    <button
+                      onClick={() => setMode("augment")}
+                      className="text-[8px] font-mono text-[#5A6575] hover:text-[#E0AF68] transition-colors cursor-pointer flex items-center gap-1"
+                    >
+                      ← INSTRUMENT
+                    </button>
+                    <div className="ml-3 text-[9px] font-mono tracking-[0.2em] text-[#4A5568] uppercase">ACTION</div>
                   </div>
-
-                  {/* Mobile: single panel */}
-                  <div className="md:hidden flex-1 overflow-hidden">
-                    {augmentTab === "field" && (
-                      <RapidsAperture
-                        dimensions={analysis?.dimensions || []}
-                        loading={analysisLoading}
-                        rapidsCompression={analysis?.rapidsCompression || ""}
-                      />
-                    )}
-                    {augmentTab === "dims" && (
-                      <DimensionStack
-                        dimensions={analysis?.dimensions || []}
-                        loading={analysisLoading}
-                        rapidsCompression={analysis?.rapidsCompression || ""}
-                        feeds={dimensionFeeds}
-                      />
-                    )}
-                    {augmentTab === "intel" && (
-                      <SimonPanel
-                        pattern={analysis?.pattern || ""}
-                        findings={analysis?.findings || []}
-                        simonSummary={analysis?.simonSummary || ""}
-                        loading={analysisLoading}
-                        dimensions={analysis?.dimensions || []}
-                      />
-                    )}
+                  <div className="flex-1 flex overflow-hidden">
+                    <ActionPanel
+                      liveFeed={liveFeed}
+                      analysis={analysis}
+                      auditRecords={auditRecords}
+                      auditLoading={auditLoading}
+                      onFetchAudits={fetchAudits}
+                    />
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
-          </motion.div>
-        )}
 
-        {/* ARCHIVE */}
-        {mode === "archive" && (
-          <motion.div
-            key="archive"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
-            className="flex-1 overflow-y-auto px-4 md:px-6 py-5 space-y-4"
-          >
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <div>
-                <button
-                  onClick={() => setMode("augment")}
-                  className="text-[8px] font-mono text-[#5A6575] hover:text-[#E0AF68] transition-colors cursor-pointer mb-1.5 flex items-center gap-1"
-                >
-                  ← INSTRUMENT
-                </button>
-                <div className="text-[9px] font-mono tracking-[0.25em] text-[#6B7280] uppercase mb-1">ARCHIVE</div>
-                <div className="text-sm font-mono font-semibold text-white">Sovereign Observation Ledger</div>
-              </div>
-              <div className="flex items-center space-x-2">
-                {(["ALL", "APPROVED", "REJECTED"] as const).map((f) => (
-                  <button key={f} onClick={() => setAuditFilter(f)} className={`text-[8.5px] font-mono font-bold px-2 py-1 rounded cursor-pointer transition-all border ${auditFilter === f ? "border-[#E0AF68]/30 bg-[#E0AF68]/8 text-[#E0AF68]" : "border-white/[0.04] text-[#4A5568] hover:text-white"}`}>{f}</button>
-                ))}
-                <button onClick={fetchAudits} disabled={auditLoading} className="text-[8.5px] font-mono text-[#4A5568] hover:text-white cursor-pointer transition-all border border-white/[0.04] px-2 py-1 rounded">
-                  {auditLoading ? "SYNCING..." : "SYNC"}
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              {filteredAudits.length === 0 ? (
-                <div className="py-16 text-center text-[10px] font-mono text-[#6B7280]">
-                  No observations sealed yet. Return to AUGMENT and use the operator channel.
-                </div>
-              ) : filteredAudits.map((a) => (
-                <div key={a.id} className="border border-white/[0.04] rounded-lg p-4 space-y-2 hover:border-white/[0.08] transition-all">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="space-y-0.5 min-w-0">
-                      <div className="flex items-center space-x-2 flex-wrap gap-1">
-                        <span className={`text-[8.5px] font-mono font-bold px-1.5 py-0.5 rounded border ${a.operatorDecision === "APPROVED" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-rose-500/10 text-rose-400 border-rose-500/20"}`}>{a.operatorDecision}</span>
-                        <span className="text-[9px] font-mono text-[#4A5568]">{a.id}</span>
-                      </div>
-                      <div className="text-[10.5px] font-mono font-semibold text-white">{a.asset} @ ${parseFloat(a.price).toLocaleString()}</div>
-                    </div>
-                    <div className="text-right text-[9px] font-mono text-[#4A5568] shrink-0">
-                      <div>{a.authority}</div>
-                      <div>{new Date(a.createdAt).toLocaleString()}</div>
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    {(a.logs || []).map((log, i) => (
-                      <div key={i} className="text-[9px] font-mono leading-relaxed">
-                        {i === 0 ? <span className="text-[#C4CDD8]">{log}</span> : <span className="text-[#6B7280]">{log}</span>}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-        )}
-
-        {/* ACTION */}
-        {mode === "action" && (
-          <motion.div
-            key="action"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
-            className="flex-1 flex flex-col overflow-hidden"
-          >
-            {/* Back nav */}
-            <div className="shrink-0 px-4 md:px-5 py-2 border-b border-white/[0.04] flex items-center">
-              <button
-                onClick={() => setMode("augment")}
-                className="text-[8px] font-mono text-[#5A6575] hover:text-[#E0AF68] transition-colors cursor-pointer flex items-center gap-1"
-              >
-                ← INSTRUMENT
-              </button>
-              <div className="ml-3 text-[9px] font-mono tracking-[0.2em] text-[#4A5568] uppercase">ACTION</div>
-            </div>
-            <div className="flex-1 flex overflow-hidden">
-              <ActionPanel
+            {/* OPERATOR CHANNEL */}
+            {(mode === "augment" || mode === "action") && (
+              <OperatorChannel
                 liveFeed={liveFeed}
-                analysis={analysis}
-                auditRecords={auditRecords}
-                auditLoading={auditLoading}
-                onFetchAudits={fetchAudits}
+                pattern={analysis?.pattern || ""}
+                findings={analysis?.findings || []}
+                onSealObservation={handleSealObservation}
+                sealing={sealing}
+                sealed={sealedFlash}
               />
-            </div>
+            )}
           </motion.div>
         )}
-      </AnimatePresence>
 
-      {/* OPERATOR CHANNEL */}
-      {(mode === "augment" || mode === "action") && (
-        <OperatorChannel
-          liveFeed={liveFeed}
-          pattern={analysis?.pattern || ""}
-          findings={analysis?.findings || []}
-          onSealObservation={handleSealObservation}
-          sealing={sealing}
-          sealed={sealedFlash}
-        />
-      )}
+      </AnimatePresence>
     </div>
   );
 }

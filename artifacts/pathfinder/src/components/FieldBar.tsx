@@ -16,6 +16,7 @@ interface FieldBarProps {
   onAssetChange: (id: AssetId) => void;
   selectedDomain: DomainId;
   onDomainChange: (id: DomainId) => void;
+  onObserve?: () => void;
 }
 
 const MODES: { id: "augment" | "archive" | "action"; label: string }[] = [
@@ -35,6 +36,7 @@ export default function FieldBar({
   onAssetChange,
   selectedDomain,
   onDomainChange,
+  onObserve,
 }: FieldBarProps) {
   const asset = getAsset(selectedAsset);
   const spot = liveFeed ? parseFloat(liveFeed.coinbaseSpotPrice) : null;
@@ -56,6 +58,14 @@ export default function FieldBar({
           </div>
           <span className="text-[9px] md:text-[10px] font-mono font-bold tracking-[0.25em] text-[#E0AF68] uppercase">PATHFINDER</span>
           <span className="hidden sm:inline text-[9px] font-mono text-[#E0AF68]/30">AUGMENT</span>
+          {onObserve && (
+            <button
+              onClick={onObserve}
+              className="hidden sm:flex items-center gap-1 text-[7px] font-mono text-[#3A4555] hover:text-[#6B7B8E] transition-colors cursor-pointer ml-1 border-l border-white/[0.04] pl-2"
+            >
+              ← OBSERVE
+            </button>
+          )}
 
           {/* Desktop: field data inline — only when Finance active */}
           {selectedDomain === "FINANCE" && (
