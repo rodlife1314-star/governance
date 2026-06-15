@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { ai } from "@workspace/integrations-gemini-ai";
+import { fetchAllFeeds, type FeedRecord } from "./dimensions";
 
 const router = Router();
 
@@ -171,9 +172,6 @@ Calculate optimal PID gains for sub-microsecond HFT execution. Return ONLY valid
 });
 
 // ── RAPIDS Background Cache ────────────────────────────────────────────────
-// Keeps the latest dimensional analysis in memory.
-// Client posts to /trigger (returns immediately), then polls /cache.
-// This avoids long-running browser connections that get aborted by the proxy.
 
 interface RapidsCache {
   status: "idle" | "computing" | "ready" | "error";
@@ -193,64 +191,97 @@ const rapidsCache: RapidsCache = {
   assetKey: null,
 };
 
-// Asset-specific dimension overrides (5th dimension varies by asset class)
 const ASSET_DIMENSIONS: Record<string, { id: string; name: string }> = {
-  BTC:  { id: "onchain",   name: "On-Chain Activity" },
-  XAU:  { id: "safehaven", name: "Safe Haven Flow" },
-  NDX:  { id: "earnings",  name: "Earnings / Growth" },
-  US30: { id: "industrial",name: "Industrial Output" },
-  XAG:  { id: "industrial",name: "Industrial Demand" },
+  BTC:  { id: "onchain",    name: "On-Chain Activity" },
+  XAU:  { id: "safehaven",  name: "Safe Haven Flow" },
+  NDX:  { id: "earnings",   name: "Earnings / Growth" },
+  US30: { id: "industrial", name: "Industrial Output" },
+  XAG:  { id: "industrial", name: "Industrial Demand" },
 };
+
+// ── Feed section builder ────────────────────────────────────────────────────
+
+function buildFeedSection(feeds: FeedRecord[]): string {
+  if (feeds.length === 0) return "AUTHORITY FEEDS: none fetched — all dimensions will use field data only.\n";
+
+  const lines = feeds.map((f) => {
+    if (f.status === "unavailable") {
+      return `  ${f.name}: UNAVAILABLE — ${f.error ?? "no authority feed"}`;
+    }
+    const ageMs = Date.now() - f.fetchedAt;
+    const ageStr = ageMs < 60_000
+      ? `${Math.round(ageMs / 1000)}s ago`
+      : `${Math.round(ageMs / 60_000)}m ago`;
+    const tag = f.status === "live" ? "LIVE" : f.status === "cached" ? "CACHED" : "DEGRADED";
+    return `  [${tag} / ${f.authority.split("(")[0].trim()} / ${ageStr}] ${f.name}: ${f.valueLabel}`;
+  });
+
+  return `AUTHORITY DIMENSION FEEDS (use these as primary signals for each corresponding dimension):\n${lines.join("\n")}\n`;
+}
+
+// ── Core analysis function ──────────────────────────────────────────────────
 
 async function runDimensionalAnalysis(body: Record<string, unknown>) {
   const {
     spotPrice, futuresPrice, basisDelta, volume, openInterest,
-    btcDominance, spreadSpot, depthBidsSpot, futuresBasis, source,
+    spreadSpot, depthBidsSpot, futuresBasis, source,
     assetKey, assetLabel, assetPair,
   } = body as Record<string, number & string>;
 
+  // Fetch real authority feeds in parallel with any prep work
+  let feeds: FeedRecord[] = [];
+  try {
+    feeds = await fetchAllFeeds();
+  } catch {
+    // Proceed with empty feeds — Gemini will note unavailable data
+  }
+
   const marketStructure = (basisDelta as number) >= 0 ? "CONTANGO" : "BACKWARDATION";
-  const asset = String(assetKey || "BTC");
-  const label = String(assetLabel || "Bitcoin");
-  const pair  = String(assetPair  || "BTC/USD");
-  const dim5  = ASSET_DIMENSIONS[asset] ?? ASSET_DIMENSIONS["BTC"];
+  const asset  = String(assetKey   || "BTC");
+  const label  = String(assetLabel || "Bitcoin");
+  const pair   = String(assetPair  || "BTC/USD");
+  const dim5   = ASSET_DIMENSIONS[asset] ?? ASSET_DIMENSIONS["BTC"];
+  const feedSection = buildFeedSection(feeds);
 
   const prompt = `You are RAPIDS, an augmentation instrument AI performing dimensional analysis for an operator.
 
 LIVE FIELD DATA — ${pair}:
 - Asset: ${label} (${pair})
 - Spot Price: $${spotPrice}
-- Futures Price: $${futuresPrice}
+- Futures Price: $${futuresPrice} [NOTE: simulated basis — not CME settlement]
 - Basis Delta: $${(basisDelta as number)?.toFixed(2)} (${marketStructure})
 - Basis %: ${((futuresBasis as number ?? 0) * 100).toFixed(4)}%
-- 24h Volume: $${((volume as number ?? 0) / 1e9).toFixed(2)}B
-- Open Interest: $${((openInterest as number ?? 0) / 1e9).toFixed(2)}B
-- Spot Spread: $${(spreadSpot as number)?.toFixed(4)}
-- Bid Depth: ${(depthBidsSpot as number)?.toFixed(1)} units
+- 24h Volume: $${((volume as number ?? 0) / 1e9).toFixed(2)}B [simulated]
+- Open Interest (field): $${((openInterest as number ?? 0) / 1e9).toFixed(2)}B [simulated]
+- Spot Spread (field): $${(spreadSpot as number)?.toFixed(4)} [simulated]
+- Bid Depth (field): ${(depthBidsSpot as number)?.toFixed(1)} units [simulated]
 - Source: ${source}
 
-Compress this ${label} market field into 10 dimensional readings specific to ${label}. Contribution values must sum to exactly 100. Return ONLY valid JSON — no markdown, no explanation, no code fences.
+${feedSection}
+INSTRUCTION: Use the AUTHORITY DIMENSION FEEDS above as the primary signal for each corresponding dimension. Where a feed is LIVE or CACHED, anchor your signal and direction to that real value. Where a feed is UNAVAILABLE or DEGRADED, state the data gap explicitly in the signal text — do not fabricate a value.
+
+Compress this ${label} market field into 10 dimensional readings. Contribution values must sum to exactly 100. Return ONLY valid JSON — no markdown, no explanation, no code fences.
 
 {
   "dimensions": [
-    { "id": "dollar", "name": "Dollar / DXY", "signal": "<10-word signal about USD impact on ${label}>", "contribution": <int 5-20>, "direction": "positive|negative|neutral" },
-    { "id": "realyields", "name": "Real Yields", "signal": "<10-word signal about real yield impact on ${label}>", "contribution": <int 5-20>, "direction": "positive|negative|neutral" },
-    { "id": "instflows", "name": "Institutional Flows", "signal": "<10-word signal about institutional positioning in ${label}>", "contribution": <int 5-20>, "direction": "positive|negative|neutral" },
-    { "id": "futures", "name": "Futures Positioning", "signal": "<10-word signal about ${label} futures structure>", "contribution": <int 5-20>, "direction": "positive|negative|neutral" },
-    { "id": "${dim5.id}", "name": "${dim5.name}", "signal": "<10-word signal specific to ${label}>", "contribution": <int 5-15>, "direction": "positive|negative|neutral" },
-    { "id": "risksentiment", "name": "Risk Sentiment", "signal": "<10-word signal about risk appetite affecting ${label}>", "contribution": <int 5-15>, "direction": "positive|negative|neutral" },
-    { "id": "commodity", "name": "Commodity Complex", "signal": "<10-word signal about commodity complex and ${label}>", "contribution": <int 5-20>, "direction": "positive|negative|neutral" },
-    { "id": "geopolitics", "name": "Geopolitics", "signal": "<10-word signal about geopolitical impact on ${label}>", "contribution": <int 5-15>, "direction": "positive|negative|neutral" },
-    { "id": "technical", "name": "Technical Structure", "signal": "<10-word signal about ${label} technical pattern>", "contribution": <int 8-22>, "direction": "positive|negative|neutral" },
-    { "id": "liquidity", "name": "Liquidity / Depth", "signal": "<10-word signal about ${label} market depth>", "contribution": <int 5-15>, "direction": "positive|negative|neutral" }
+    { "id": "dollar", "name": "Dollar / DXY", "signal": "<signal grounded in DXY authority feed value>", "contribution": <int 5-20>, "direction": "positive|negative|neutral" },
+    { "id": "realyields", "name": "Real Yields", "signal": "<signal grounded in TIPS authority feed value>", "contribution": <int 5-20>, "direction": "positive|negative|neutral" },
+    { "id": "instflows", "name": "Institutional Flows", "signal": "<signal grounded in Binance OI authority feed>", "contribution": <int 5-20>, "direction": "positive|negative|neutral" },
+    { "id": "futures", "name": "Futures Positioning", "signal": "<signal grounded in Binance funding rate authority feed>", "contribution": <int 5-20>, "direction": "positive|negative|neutral" },
+    { "id": "${dim5.id}", "name": "${dim5.name}", "signal": "<signal specific to ${label} using CNY or asset-specific authority feed>", "contribution": <int 5-15>, "direction": "positive|negative|neutral" },
+    { "id": "risksentiment", "name": "Risk Sentiment", "signal": "<signal grounded in VIX authority feed value>", "contribution": <int 5-15>, "direction": "positive|negative|neutral" },
+    { "id": "commodity", "name": "Commodity Complex", "signal": "<signal grounded in WTI authority feed value>", "contribution": <int 5-20>, "direction": "positive|negative|neutral" },
+    { "id": "geopolitics", "name": "Geopolitics", "signal": "<if UNAVAILABLE: state 'No authority feed — operator assessment required'>", "contribution": <int 3-8>, "direction": "neutral" },
+    { "id": "technical", "name": "Technical Structure", "signal": "<signal grounded in QQQ authority feed and spot price>", "contribution": <int 8-22>, "direction": "positive|negative|neutral" },
+    { "id": "liquidity", "name": "Liquidity / Depth", "signal": "<signal grounded in Coinbase spread authority feed>", "contribution": <int 5-15>, "direction": "positive|negative|neutral" }
   ],
-  "pattern": "<single declarative sentence describing dominant ${label} market structure>",
-  "findings": ["<data-backed finding about ${label}>","<data-backed finding>","<data-backed finding>","<data-backed finding>","<data-backed finding>"],
-  "simonSummary": "<2-3 sentence synthesis of ${label} dimensions>",
+  "pattern": "<single declarative sentence describing dominant ${label} market structure, referencing real feed values>",
+  "findings": ["<finding citing real authority feed value>","<finding citing real feed>","<finding citing real feed>","<finding citing real feed>","<finding citing real feed>"],
+  "simonSummary": "<2-3 sentence synthesis citing specific real feed values>",
   "rapidsCompression": "10 dimensions → <N> primary drivers → <pattern name>"
 }`;
 
-  const raw = await callGemini(prompt, "You are RAPIDS. Return only valid JSON. No markdown fences. No explanation.");
+  const raw = await callGemini(prompt, "You are RAPIDS. Return only valid JSON. No markdown fences. No explanation. Anchor every signal to a real authority feed value where available.");
   const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
   return JSON.parse(cleaned);
 }
@@ -260,35 +291,34 @@ function buildFallback(body: Record<string, unknown>) {
   const marketStructure = basisDelta >= 0 ? "CONTANGO" : "BACKWARDATION";
   return {
     dimensions: [
-      { id: "dollar", name: "Dollar / DXY", signal: "DXY correlating inversely with BTC pressure", contribution: 12, direction: "positive" },
-      { id: "realyields", name: "Real Yields", signal: "Real yield environment supporting risk assets", contribution: 8, direction: "positive" },
-      { id: "instflows", name: "Institutional Flows", signal: "CME open interest elevated, institutional engagement", contribution: 10, direction: "positive" },
-      { id: "futures", name: "Futures Positioning", signal: `${marketStructure} basis — ${basisDelta >= 0 ? "healthy premium" : "discount pressure"}`, contribution: 12, direction: basisDelta >= 0 ? "positive" : "negative" },
-      { id: "onchain", name: "On-Chain Activity", signal: "Volume consistent with trend continuation", contribution: 9, direction: "neutral" },
-      { id: "risksentiment", name: "Risk Sentiment", signal: "Market risk appetite moderately elevated", contribution: 7, direction: "neutral" },
-      { id: "commodity", name: "Commodity Complex", signal: "Commodity complex correlated macro uplift", contribution: 13, direction: "positive" },
-      { id: "geopolitics", name: "Geopolitics", signal: "Geopolitical backdrop broadly neutral", contribution: 8, direction: "neutral" },
-      { id: "technical", name: "Technical Structure", signal: "Price structure maintaining upward trajectory", contribution: 14, direction: "positive" },
-      { id: "liquidity", name: "Liquidity / Depth", signal: "Order book depth adequate, spreads contained", contribution: 7, direction: "positive" },
+      { id: "dollar",       name: "Dollar / DXY",        signal: "Authority feed degraded — DXY direction unavailable",          contribution: 10, direction: "neutral" },
+      { id: "realyields",   name: "Real Yields",          signal: "Authority feed degraded — TIPS rate unavailable",              contribution: 8,  direction: "neutral" },
+      { id: "instflows",    name: "Institutional Flows",  signal: `Field OI $${((openInterest ?? 0) / 1e9).toFixed(1)}B — Binance feed degraded`,  contribution: 10, direction: "neutral" },
+      { id: "futures",      name: "Futures Positioning",  signal: `${marketStructure} basis $${Math.abs(basisDelta ?? 0).toFixed(0)} — funding rate feed degraded`, contribution: 12, direction: basisDelta >= 0 ? "positive" : "negative" },
+      { id: "onchain",      name: "On-Chain Activity",    signal: "Authority feed degraded — on-chain signal unavailable",        contribution: 9,  direction: "neutral" },
+      { id: "risksentiment",name: "Risk Sentiment",       signal: "VIX authority feed degraded — risk posture unavailable",       contribution: 7,  direction: "neutral" },
+      { id: "commodity",    name: "Commodity Complex",    signal: "WTI authority feed degraded — commodity signal unavailable",   contribution: 13, direction: "neutral" },
+      { id: "geopolitics",  name: "Geopolitics",          signal: "No authority feed — operator assessment required",             contribution: 5,  direction: "neutral" },
+      { id: "technical",    name: "Technical Structure",  signal: `Spot $${body.spotPrice ?? "??"} — QQQ feed degraded`,          contribution: 19, direction: "neutral" },
+      { id: "liquidity",    name: "Liquidity / Depth",    signal: `Field spread — Coinbase ticker feed degraded`,                 contribution: 7,  direction: "neutral" },
     ],
-    pattern: "Multi-dimensional constructive bias — technical and macro dimensions aligned",
+    pattern: "Gemini unavailable — authority feeds degraded — operator field observation required",
     findings: [
-      `Futures basis ${basisDelta >= 0 ? "positive" : "negative"} at $${Math.abs(basisDelta ?? 0).toFixed(0)} — ${marketStructure}`,
-      `Open interest $${((openInterest ?? 0) / 1e9).toFixed(1)}B signals institutional positioning`,
-      `BTC dominance ${btcDominance?.toFixed(1)}% — capital concentration in BTC layer`,
-      `24h volume $${((volume ?? 0) / 1e9).toFixed(1)}B — within normal distribution`,
-      `Bid-side depth ${depthBidsSpot?.toFixed(0)} BTC — adequate liquidity for current range`,
+      `Futures basis ${basisDelta >= 0 ? "positive" : "negative"} $${Math.abs(basisDelta ?? 0).toFixed(0)} — ${marketStructure}`,
+      `Field OI $${((openInterest ?? 0) / 1e9).toFixed(1)}B — Binance authority feed degraded`,
+      `BTC dominance ${btcDominance?.toFixed(1) ?? "?"}% — field snapshot only`,
+      `24h volume $${((volume ?? 0) / 1e9).toFixed(1)}B — field snapshot only`,
+      `Bid depth ${depthBidsSpot?.toFixed(0) ?? "?"} units — Coinbase authority feed degraded`,
     ],
-    simonSummary: `10 dimensions compressed to 3 primary drivers: Technical Structure, Futures Positioning, Institutional Flows. ${marketStructure} basis confirms constructive near-term bias. Operator sovereignty: verify against field observation before committing.`,
-    rapidsCompression: `10 dimensions → 3 primary drivers → ${marketStructure} continuation`,
+    simonSummary: `RAPIDS engine unavailable. Authority feeds may be degraded. Field data preserved for operator review. Do not treat any dimension as authoritative — verify against direct market observation before committing.`,
+    rapidsCompression: `10 dimensions → authority feeds degraded → operator field assessment required`,
   };
 }
 
-// POST /gemini/dimensional-trigger — starts background computation, returns immediately
+// POST /gemini/dimensional-trigger
 router.post("/gemini/dimensional-trigger", (req, res) => {
   const incomingAssetKey = String(req.body.assetKey || "BTC");
 
-  // If asset switched, invalidate cache immediately
   if (rapidsCache.assetKey && rapidsCache.assetKey !== incomingAssetKey) {
     rapidsCache.status = "idle";
     rapidsCache.analysis = null;
@@ -300,7 +330,6 @@ router.post("/gemini/dimensional-trigger", (req, res) => {
     res.json({ success: true, status: "computing", message: "Already computing" });
     return;
   }
-  // If already ready and fresh (< 90 seconds) for the same asset, serve cache
   const age = rapidsCache.computedAt ? Date.now() - rapidsCache.computedAt : Infinity;
   if (rapidsCache.status === "ready" && age < 90_000 && rapidsCache.assetKey === incomingAssetKey) {
     res.json({ success: true, status: "ready", message: "Cache fresh" });
@@ -311,7 +340,6 @@ router.post("/gemini/dimensional-trigger", (req, res) => {
   rapidsCache.assetKey = incomingAssetKey;
   rapidsCache.fieldSnapshot = req.body;
 
-  // Fire-and-forget background computation
   (async () => {
     try {
       const result = await runDimensionalAnalysis(req.body);
@@ -323,14 +351,14 @@ router.post("/gemini/dimensional-trigger", (req, res) => {
       rapidsCache.analysis = buildFallback(req.body);
       rapidsCache.status = "ready";
       rapidsCache.computedAt = Date.now();
-      rapidsCache.error = "Gemini unavailable — fallback applied";
+      rapidsCache.error = "Gemini unavailable — fallback applied, feeds degraded";
     }
   })();
 
   res.json({ success: true, status: "computing" });
 });
 
-// GET /gemini/dimensional-cache — returns current cache state (always fast)
+// GET /gemini/dimensional-cache
 router.get("/gemini/dimensional-cache", (_req, res) => {
   res.json({
     success: true,
@@ -342,85 +370,11 @@ router.get("/gemini/dimensional-cache", (_req, res) => {
   });
 });
 
-// POST /gemini/dimensional-analysis — legacy long-running endpoint (kept for curl testing)
+// POST /gemini/dimensional-analysis — legacy curl testing endpoint
 router.post("/gemini/dimensional-analysis", async (req, res) => {
   try {
-    const { spotPrice, futuresPrice, basisDelta, volume, openInterest, btcDominance, spreadSpot, depthBidsSpot, futuresBasis, source } = req.body;
-    const marketStructure = basisDelta >= 0 ? "CONTANGO" : "BACKWARDATION";
-
-    const prompt = `You are RAPIDS, an augmentation instrument AI performing dimensional analysis for an operator.
-
-LIVE FIELD DATA — BTC/USD:
-- Spot Price: $${spotPrice}
-- CME Futures: $${futuresPrice}
-- Basis Delta: $${basisDelta?.toFixed(2)} (${marketStructure})
-- Basis %: ${((futuresBasis ?? 0) * 100).toFixed(4)}%
-- 24h Volume: $${((volume ?? 0) / 1e9).toFixed(2)}B
-- Open Interest: $${((openInterest ?? 0) / 1e9).toFixed(2)}B
-- BTC Dominance: ${btcDominance?.toFixed(2)}%
-- Spot Spread: $${spreadSpot?.toFixed(2)}
-- Bid Depth: ${depthBidsSpot?.toFixed(1)} BTC
-- Source: ${source}
-
-You must compress this field into 10 dimensional readings. Contribution values must sum to exactly 100. Return ONLY valid JSON — no markdown, no explanation, no code fences.
-
-{
-  "dimensions": [
-    { "id": "dollar", "name": "Dollar / DXY", "signal": "<10-word signal>", "contribution": <int 5-20>, "direction": "positive|negative|neutral" },
-    { "id": "realyields", "name": "Real Yields", "signal": "<10-word signal>", "contribution": <int 5-20>, "direction": "positive|negative|neutral" },
-    { "id": "instflows", "name": "Institutional Flows", "signal": "<10-word signal>", "contribution": <int 5-20>, "direction": "positive|negative|neutral" },
-    { "id": "futures", "name": "Futures Positioning", "signal": "<10-word signal>", "contribution": <int 5-20>, "direction": "positive|negative|neutral" },
-    { "id": "onchain", "name": "On-Chain Activity", "signal": "<10-word signal>", "contribution": <int 5-15>, "direction": "positive|negative|neutral" },
-    { "id": "risksentiment", "name": "Risk Sentiment", "signal": "<10-word signal>", "contribution": <int 5-15>, "direction": "positive|negative|neutral" },
-    { "id": "commodity", "name": "Commodity Complex", "signal": "<10-word signal>", "contribution": <int 5-20>, "direction": "positive|negative|neutral" },
-    { "id": "geopolitics", "name": "Geopolitics", "signal": "<10-word signal>", "contribution": <int 5-15>, "direction": "positive|negative|neutral" },
-    { "id": "technical", "name": "Technical Structure", "signal": "<10-word signal>", "contribution": <int 8-22>, "direction": "positive|negative|neutral" },
-    { "id": "liquidity", "name": "Liquidity / Depth", "signal": "<10-word signal>", "contribution": <int 5-15>, "direction": "positive|negative|neutral" }
-  ],
-  "pattern": "<single declarative sentence describing dominant market structure>",
-  "findings": [
-    "<specific data-backed finding>",
-    "<specific data-backed finding>",
-    "<specific data-backed finding>",
-    "<specific data-backed finding>",
-    "<specific data-backed finding>"
-  ],
-  "simonSummary": "<2-3 sentence synthesis of what the 10 dimensions resolve to>",
-  "rapidsCompression": "10 dimensions → <N> primary drivers → <concise pattern name>"
-}`;
-
-    const raw = await callGemini(prompt, "You are RAPIDS. Return only valid JSON. No markdown fences. No explanation.");
-    let parsed: any;
-    try {
-      const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-      parsed = JSON.parse(cleaned);
-    } catch {
-      parsed = {
-        dimensions: [
-          { id: "dollar", name: "Dollar / DXY", signal: "DXY correlating inversely with BTC pressure", contribution: 12, direction: "positive" },
-          { id: "realyields", name: "Real Yields", signal: "Real yield environment supporting risk assets", contribution: 8, direction: "positive" },
-          { id: "instflows", name: "Institutional Flows", signal: "CME open interest elevated, institutional engagement", contribution: 10, direction: "positive" },
-          { id: "futures", name: "Futures Positioning", signal: `${marketStructure} basis — ${basisDelta >= 0 ? "healthy premium" : "discount pressure"}`, contribution: 12, direction: basisDelta >= 0 ? "positive" : "negative" },
-          { id: "onchain", name: "On-Chain Activity", signal: "Volume consistent with trend continuation", contribution: 9, direction: "neutral" },
-          { id: "risksentiment", name: "Risk Sentiment", signal: "Market risk appetite moderately elevated", contribution: 7, direction: "neutral" },
-          { id: "commodity", name: "Commodity Complex", signal: "Commodity complex correlated macro uplift", contribution: 13, direction: "positive" },
-          { id: "geopolitics", name: "Geopolitics", signal: "Geopolitical backdrop broadly neutral", contribution: 8, direction: "neutral" },
-          { id: "technical", name: "Technical Structure", signal: "Price structure maintaining upward trajectory", contribution: 14, direction: "positive" },
-          { id: "liquidity", name: "Liquidity / Depth", signal: "Order book depth adequate, spreads contained", contribution: 7, direction: "positive" },
-        ],
-        pattern: "Multi-dimensional constructive bias — technical and macro dimensions aligned",
-        findings: [
-          `Futures basis ${basisDelta >= 0 ? "positive" : "negative"} at $${Math.abs(basisDelta ?? 0).toFixed(0)} — market structure ${marketStructure}`,
-          `Open interest $${((openInterest ?? 0) / 1e9).toFixed(1)}B signals institutional positioning present`,
-          `BTC dominance ${btcDominance?.toFixed(1)}% — capital rotating into BTC layer`,
-          `24h volume $${((volume ?? 0) / 1e9).toFixed(1)}B — within normal distribution`,
-          `Bid-side depth ${depthBidsSpot?.toFixed(0)} BTC — liquidity adequate for current range`,
-        ],
-        simonSummary: `10 dimensions compressed into 3 primary drivers: Technical Structure, Futures Positioning, and Institutional Flows. The ${marketStructure} basis structure confirms constructive near-term bias. Operator sovereignty: verify against field observation before committing.`,
-        rapidsCompression: `10 dimensions → 3 primary drivers → ${marketStructure} continuation pattern`,
-      };
-    }
-    res.json({ success: true, ...parsed });
+    const result = await runDimensionalAnalysis(req.body);
+    res.json({ success: true, ...result });
   } catch (err: any) {
     req.log.error(err, "Gemini dimensional-analysis failed");
     res.status(500).json({ success: false, error: "Gemini API error" });

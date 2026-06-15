@@ -34,3 +34,23 @@ export interface LiveFeedData {
   pingMs: number;
   source: string;
 }
+
+export type FeedStatus = "live" | "cached" | "degraded" | "unavailable";
+
+export interface FeedRecord {
+  id: string;
+  name: string;
+  authority: string;
+  authorityUrl: string;
+  packetId: string;
+  value: number | null;
+  valueLabel: string;
+  valueUnit: string;
+  fetchedAt: number;
+  dataTimestamp: string | null;
+  refreshIntervalMs: number;
+  status: FeedStatus;
+  cacheAgeMs: number;
+  error: string | null;
+  context: string;
+}

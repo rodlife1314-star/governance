@@ -1,1 +1,1 @@
-- [Pathfinder instrument philosophy](pathfinder-instrument.md) — AUGMENT/ARCHIVE/ACTION loop; code is machine room, never on the operator surface.
+- [Reachable market data APIs from Replit](reachable-market-apis.md) — which public APIs work vs. are blocked (Binance/Bybit=blocked, OKX+Coinbase+CBOE+YF-with-Referer=working)

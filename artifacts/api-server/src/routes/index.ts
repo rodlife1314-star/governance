@@ -8,6 +8,7 @@ import scenariosRouter from "./scenarios";
 import dashboardRouter from "./dashboard";
 import sovereignRouter from "./sovereign";
 import geminiRouter from "./gemini";
+import dimensionsRouter from "./dimensions";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use(scenariosRouter);
 router.use(dashboardRouter);
 router.use(sovereignRouter);
 router.use(geminiRouter);
+router.use(dimensionsRouter);
 
 export default router;

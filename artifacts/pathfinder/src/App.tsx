@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getAbsoluteUrl } from "./utils";
-import { LiveFeedData, DimensionalAnalysis } from "./augment-types";
+import { LiveFeedData, DimensionalAnalysis, FeedRecord } from "./augment-types";
 import { AssetId, ASSETS, getAsset, generateMockFeed } from "./assets";
 
 import FieldBar from "./components/FieldBar";
@@ -45,6 +45,10 @@ export default function App() {
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Authority dimension feeds (live feed status per dimension)
+  const [dimensionFeeds, setDimensionFeeds] = useState<FeedRecord[]>([]);
+  const feedsPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   // Operator channel
   const [sealing, setSealing] = useState(false);
   const [sealedFlash, setSealedFlash] = useState(false);
@@ -53,6 +57,8 @@ export default function App() {
   const [auditRecords, setAuditRecords] = useState<AuditRecord[]>([]);
   const [auditLoading, setAuditLoading] = useState(false);
   const [auditFilter, setAuditFilter] = useState<"ALL" | "APPROVED" | "REJECTED">("ALL");
+
+  // ── Polling helpers ───────────────────────────────────────────────────────
 
   const stopPolling = useCallback(() => {
     if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
@@ -83,9 +89,23 @@ export default function App() {
     }, 2000);
   }, [stopPolling, applyAnalysis]);
 
+  // ── Dimension feeds ────────────────────────────────────────────────────────
+
+  const fetchDimensionFeeds = useCallback(async () => {
+    try {
+      const res = await fetch(getAbsoluteUrl("/api/dimensions/feeds"));
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.success && Array.isArray(data.feeds)) {
+        setDimensionFeeds(data.feeds as FeedRecord[]);
+      }
+    } catch { /* preserve last known feeds */ }
+  }, []);
+
+  // ── Analysis trigger ──────────────────────────────────────────────────────
+
   const triggerAnalysis = useCallback(async (feed: LiveFeedData, assetId: AssetId) => {
     const asset = getAsset(assetId);
-    // Check cache — only use if asset matches
     try {
       const cacheRes = await fetch(getAbsoluteUrl("/api/gemini/dimensional-cache"));
       const cacheData = await cacheRes.json();
@@ -97,30 +117,30 @@ export default function App() {
 
     setAnalysisLoading(true);
     try {
-      const spot = parseFloat(feed.coinbaseSpotPrice);
+      const spot   = parseFloat(feed.coinbaseSpotPrice);
       const future = parseFloat(feed.cmeFuturePrice);
       const triggerRes = await fetch(getAbsoluteUrl("/api/gemini/dimensional-trigger"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          assetKey: assetId,
-          assetLabel: asset.label,
-          assetPair: asset.pair,
-          spotPrice: spot,
+          assetKey:     assetId,
+          assetLabel:   asset.label,
+          assetPair:    asset.pair,
+          spotPrice:    spot,
           futuresPrice: future,
-          basisDelta: future - spot,
-          volume: feed.volume,
+          basisDelta:   future - spot,
+          volume:       feed.volume,
           openInterest: feed.openInterest,
           btcDominance: feed.btcDominance,
-          spreadSpot: feed.spreadSpot,
-          depthBidsSpot: feed.depthBidsSpot,
+          spreadSpot:   feed.spreadSpot,
+          depthBidsSpot:feed.depthBidsSpot,
           futuresBasis: feed.futuresBasis,
-          source: feed.source,
+          source:       feed.source,
         }),
       });
       const triggerData = await triggerRes.json();
       if (triggerData.status === "ready") {
-        const cacheRes = await fetch(getAbsoluteUrl("/api/gemini/dimensional-cache"));
+        const cacheRes  = await fetch(getAbsoluteUrl("/api/gemini/dimensional-cache"));
         const cacheData = await cacheRes.json();
         if (cacheData.analysis && cacheData.assetKey === assetId) {
           applyAnalysis(cacheData.analysis as Record<string, unknown>);
@@ -131,12 +151,13 @@ export default function App() {
     } catch { setAnalysisLoading(false); }
   }, [startPolling, applyAnalysis]);
 
+  // ── Live feed ─────────────────────────────────────────────────────────────
+
   const fetchLiveFeed = useCallback(async (assetId?: AssetId) => {
-    const id = assetId ?? selectedAsset;
+    const id    = assetId ?? selectedAsset;
     const asset = getAsset(id);
 
     if (!asset.live) {
-      // Generate mock feed for non-BTC assets
       const mock = generateMockFeed(asset);
       setLiveFeed(mock);
       return mock;
@@ -146,7 +167,7 @@ export default function App() {
     feedLoadingRef.current = true;
     setFeedLoading(true);
     try {
-      const res = await fetch(getAbsoluteUrl("/api/sovereign/live-feed"));
+      const res  = await fetch(getAbsoluteUrl("/api/sovereign/live-feed"));
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.success) { setLiveFeed(data); return data as LiveFeedData; }
@@ -155,10 +176,12 @@ export default function App() {
     return null;
   }, [selectedAsset]);
 
+  // ── Audits ────────────────────────────────────────────────────────────────
+
   const fetchAudits = useCallback(async () => {
     setAuditLoading(true);
     try {
-      const res = await fetch(getAbsoluteUrl("/api/sovereign/audits"));
+      const res  = await fetch(getAbsoluteUrl("/api/sovereign/audits"));
       const data = await res.json();
       if (data.success) setAuditRecords(data.audits || []);
     } catch {} finally { setAuditLoading(false); }
@@ -169,18 +192,18 @@ export default function App() {
     setSealing(true);
     const asset = getAsset(selectedAsset);
     try {
-      const spot = parseFloat(liveFeed.coinbaseSpotPrice);
+      const spot   = parseFloat(liveFeed.coinbaseSpotPrice);
       const future = parseFloat(liveFeed.cmeFuturePrice);
-      const basis = future - spot;
+      const basis  = future - spot;
       await fetch(getAbsoluteUrl("/api/sovereign/audits"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          id: `OBS-${Date.now().toString(36).toUpperCase()}`,
-          authority: liveFeed.source,
-          asset: asset.pair,
-          price: liveFeed.coinbaseSpotPrice,
-          packetId: `PKT-${Date.now().toString(36).toUpperCase()}`,
+          id:            `OBS-${Date.now().toString(36).toUpperCase()}`,
+          authority:     liveFeed.source,
+          asset:         asset.pair,
+          price:         liveFeed.coinbaseSpotPrice,
+          packetId:      `PKT-${Date.now().toString(36).toUpperCase()}`,
           operatorEmail: "operator@pathfinder.local",
           logs: [
             operatorText,
@@ -188,9 +211,9 @@ export default function App() {
             `Basis: ${basis >= 0 ? "+" : ""}${basis.toFixed(2)} (${basis >= 0 ? "CONTANGO" : "BACKWARDATION"})`,
             `RAPIDS: ${analysis?.rapidsCompression || "none"}`,
           ],
-          signature: `OBS-SIG-${Date.now()}`,
-          verified: true,
-          operatorDecision: "APPROVED",
+          signature:       `OBS-SIG-${Date.now()}`,
+          verified:        true,
+          operatorDecision:"APPROVED",
           divergenceState: "ALIGNED",
           divergenceDelta: Math.abs(basis),
         }),
@@ -201,7 +224,8 @@ export default function App() {
     } catch {} finally { setSealing(false); }
   }, [liveFeed, analysis, sealing, selectedAsset, fetchAudits]);
 
-  // Asset switch: clear analysis, fetch/generate new feed, re-trigger
+  // ── Asset switch ──────────────────────────────────────────────────────────
+
   const handleAssetChange = useCallback(async (id: AssetId) => {
     setSelectedAsset(id);
     setAnalysis(null);
@@ -210,27 +234,41 @@ export default function App() {
     if (feed) triggerAnalysis(feed, id);
   }, [fetchLiveFeed, triggerAnalysis, stopPolling]);
 
+  // ── Lifecycle ─────────────────────────────────────────────────────────────
+
   // Initial load
   useEffect(() => {
     (async () => {
       const feed = await fetchLiveFeed("BTC");
       if (feed) triggerAnalysis(feed, "BTC");
+      fetchDimensionFeeds();
     })();
   }, []);
 
-  // Cleanup polling on unmount
-  useEffect(() => () => stopPolling(), []);
+  // Cleanup on unmount
+  useEffect(() => () => {
+    stopPolling();
+    if (feedsPollRef.current) clearInterval(feedsPollRef.current);
+  }, []);
 
   // Load audits when entering archive or action mode
   useEffect(() => {
     if (mode === "archive" || mode === "action") fetchAudits();
   }, [mode]);
 
-  // Auto-refresh feed every 30s
+  // Auto-refresh live feed every 30s
   useEffect(() => {
-    const t = setInterval(() => fetchLiveFeed(), 30000);
+    const t = setInterval(() => fetchLiveFeed(), 30_000);
     return () => clearInterval(t);
   }, [fetchLiveFeed]);
+
+  // Auto-refresh dimension feeds every 60s
+  useEffect(() => {
+    feedsPollRef.current = setInterval(fetchDimensionFeeds, 60_000);
+    return () => { if (feedsPollRef.current) clearInterval(feedsPollRef.current); };
+  }, [fetchDimensionFeeds]);
+
+  // ── Render ────────────────────────────────────────────────────────────────
 
   const filteredAudits = auditRecords.filter((a) =>
     auditFilter === "ALL" || a.operatorDecision === auditFilter
@@ -286,6 +324,7 @@ export default function App() {
                 dimensions={analysis?.dimensions || []}
                 loading={analysisLoading}
                 rapidsCompression={analysis?.rapidsCompression || ""}
+                feeds={dimensionFeeds}
               />
               <RapidsAperture
                 dimensions={analysis?.dimensions || []}
@@ -314,6 +353,7 @@ export default function App() {
                   dimensions={analysis?.dimensions || []}
                   loading={analysisLoading}
                   rapidsCompression={analysis?.rapidsCompression || ""}
+                  feeds={dimensionFeeds}
                 />
               )}
               {augmentTab === "intel" && (
