@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getAbsoluteUrl } from "./utils";
 import { LiveFeedData, DimensionalAnalysis, FeedRecord, Finding, ObservationAnalysis } from "./augment-types";
-import { AssetId, ASSETS, getAsset, generateMockFeed } from "./assets";
+import { AssetId, ASSETS, getAsset } from "./assets";
 import { DomainId, getDomain } from "./domains";
 
 import FieldBar from "./components/FieldBar";
@@ -171,12 +171,6 @@ export default function App() {
   const fetchLiveFeed = useCallback(async (assetId?: AssetId) => {
     const id    = assetId ?? selectedAsset;
     const asset = getAsset(id);
-
-    if (!asset.live) {
-      const mock = generateMockFeed(asset);
-      setLiveFeed(mock);
-      return mock;
-    }
 
     if (feedLoadingRef.current) return null;
     feedLoadingRef.current = true;

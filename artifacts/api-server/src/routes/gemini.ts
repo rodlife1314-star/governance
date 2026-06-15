@@ -223,11 +223,20 @@ function buildFeedSection(feeds: FeedRecord[]): string {
 // ── Core analysis function ──────────────────────────────────────────────────
 
 async function runDimensionalAnalysis(body: Record<string, unknown>) {
-  const {
-    spotPrice, futuresPrice, basisDelta, volume, openInterest,
-    spreadSpot, depthBidsSpot, futuresBasis, source,
-    assetKey, assetLabel, assetPair,
-  } = body as Record<string, number & string>;
+  // Declare asset variables first — used in fetchAllFeeds
+  const asset  = String(body.assetKey   || "BTC");
+  const label  = String(body.assetLabel || "Bitcoin");
+  const pair   = String(body.assetPair  || "BTC/USD");
+
+  const spotPrice    = body.spotPrice    as number | null | undefined;
+  const futuresPrice = body.futuresPrice as number | null | undefined;
+  const basisDelta   = body.basisDelta   as number | null | undefined;
+  const futuresBasis = body.futuresBasis as number | null | undefined;
+  const volume       = body.volume       as number | null | undefined;
+  const openInterest = body.openInterest as number | null | undefined;
+  const spreadSpot   = body.spreadSpot   as number | null | undefined;
+  const depthBidsSpot = body.depthBidsSpot as number | null | undefined;
+  const source       = String(body.source || "unknown");
 
   // Fetch real authority feeds for this specific asset
   let feeds: FeedRecord[] = [];
@@ -237,10 +246,7 @@ async function runDimensionalAnalysis(body: Record<string, unknown>) {
     // Proceed with empty feeds — Gemini will note unavailable data
   }
 
-  const marketStructure = (basisDelta as number) >= 0 ? "CONTANGO" : "BACKWARDATION";
-  const asset  = String(assetKey   || "BTC");
-  const label  = String(assetLabel || "Bitcoin");
-  const pair   = String(assetPair  || "BTC/USD");
+  const marketStructure = (basisDelta ?? 0) >= 0 ? "CONTANGO" : "BACKWARDATION";
   const dim5   = ASSET_DIMENSIONS[asset] ?? ASSET_DIMENSIONS["BTC"];
   const feedSection = buildFeedSection(feeds);
 
@@ -255,19 +261,26 @@ async function runDimensionalAnalysis(body: Record<string, unknown>) {
   const onchainName   = onchainFeed?.name   ?? dim5.name;
   const liquidityName = liquidityFeed?.name ?? "Liquidity / Depth";
 
+  // Build field data lines — only include fields that have real values
+  const fieldLines: string[] = [
+    `- Asset: ${label} (${pair})`,
+    `- Spot Price: $${spotPrice ?? "unavailable"} [${spotPrice != null ? `${source} / live snapshot` : "feed unavailable"}]`,
+    `- Futures Price: $${futuresPrice ?? "unavailable"} [${futuresPrice != null ? `${source} / live snapshot` : "feed unavailable"}]`,
+    `- Basis Delta: ${basisDelta != null ? `$${basisDelta.toFixed(2)} (${marketStructure})` : "unavailable — futures or spot feed down"}`,
+    `- Basis %: ${futuresBasis != null ? `${(futuresBasis * 100).toFixed(4)}%` : "unavailable"}`,
+    `- 24h Volume: ${volume != null ? `$${(volume / 1e9).toFixed(2)}B [${source} / live]` : "unavailable — no live volume feed"}`,
+    `- Open Interest: ${openInterest != null ? `$${(openInterest / 1e9).toFixed(2)}B [${source} / live]` : "unavailable — OI not available from REST snapshot"}`,
+    `- Spot Spread: ${spreadSpot != null ? `$${spreadSpot.toFixed(4)} [${source} / live bid-ask]` : "unavailable — spread not available for this instrument"}`,
+    `- Best Bid Qty: ${depthBidsSpot != null ? `${depthBidsSpot.toFixed(4)} units [${source} / book ticker]` : "unavailable — order book not available"}`,
+    `- Source: ${source}`,
+  ];
+
   const prompt = `You are RAPIDS, an augmentation instrument AI performing dimensional analysis for an operator.
 
+CRITICAL — DATA INTEGRITY RULE: Do not fabricate, estimate, or substitute any quantitative value. Where a field above is marked "unavailable", state it is unavailable in your signal text — never guess or use a typical value. Silence is preferable to fabrication.
+
 LIVE FIELD DATA — ${pair}:
-- Asset: ${label} (${pair})
-- Spot Price: $${spotPrice}
-- Futures Price: $${futuresPrice} [NOTE: simulated basis — not exchange settlement]
-- Basis Delta: $${(basisDelta as number)?.toFixed(2)} (${marketStructure})
-- Basis %: ${((futuresBasis as number ?? 0) * 100).toFixed(4)}%
-- 24h Volume: $${((volume as number ?? 0) / 1e9).toFixed(2)}B [simulated]
-- Open Interest (field): $${((openInterest as number ?? 0) / 1e9).toFixed(2)}B [simulated]
-- Spot Spread (field): $${(spreadSpot as number)?.toFixed(4)} [simulated]
-- Bid Depth (field): ${(depthBidsSpot as number)?.toFixed(1)} units [simulated]
-- Source: ${source}
+${fieldLines.join("\n")}
 
 ${feedSection}
 INSTRUCTION: Use the AUTHORITY DIMENSION FEEDS above as the primary signal for each corresponding dimension. Where a feed is LIVE or CACHED, anchor your signal and direction to that real value. Where a feed is UNAVAILABLE or DEGRADED, state the data gap explicitly in the signal text — do not fabricate a value. All signals must be relevant to ${label} — do not reference BTC-specific metrics when analyzing other assets.
@@ -299,7 +312,13 @@ Compress this ${label} market field into 10 dimensional readings. Contribution v
   "rapidsCompression": "10 dimensions → <N> primary drivers → <pattern name>"
 }`;
 
-  const raw = await callGemini(prompt, "You are RAPIDS. Return only valid JSON. No markdown fences. No explanation. Anchor every signal to a real authority feed value where available.");
+  const raw = await callGemini(prompt, [
+    "You are RAPIDS. Return only valid JSON. No markdown fences. No explanation.",
+    "Anchor every signal to a real authority feed value where available.",
+    "CRITICAL — DATA INTEGRITY: Do not fabricate, estimate, or substitute any quantitative value.",
+    "Where a field is marked 'unavailable', state it is unavailable — never guess or use a typical value.",
+    "Reality comes first. Silence is preferable to fabrication.",
+  ].join(" "));
   const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
   return JSON.parse(cleaned);
 }

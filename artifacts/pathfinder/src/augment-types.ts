@@ -36,18 +36,29 @@ export interface ObservationAnalysis extends DimensionalAnalysis {
   citedAuthorities?: CitedAuthority[];
 }
 
+export type DataQualityStatus = "live" | "snapshot" | "unavailable";
+
+export interface DataQuality {
+  spot: DataQualityStatus;
+  futures: DataQualityStatus;
+  volume: DataQualityStatus;
+  oi: DataQualityStatus;
+  dominance: DataQualityStatus;
+  depth: DataQualityStatus;
+}
+
 export interface LiveFeedData {
   coinbaseSpotPrice: string;
   cmeFuturePrice: string;
-  btcDominance: number;
-  volume: number;
-  spreadSpot: number;
-  spreadFutures: number;
-  depthBidsSpot: number;
-  depthAsksSpot: number;
-  depthBidsFutures: number;
-  depthAsksFutures: number;
-  openInterest: number;
+  btcDominance: number | null;
+  volume: number | null;
+  spreadSpot: number | null;
+  spreadFutures: number | null;
+  depthBidsSpot: number | null;
+  depthAsksSpot: number | null;
+  depthBidsFutures: number | null;
+  depthAsksFutures: number | null;
+  openInterest: number | null;
   futuresBasis: number;
   timestampA: string;
   timestampB: string;
@@ -55,6 +66,7 @@ export interface LiveFeedData {
   latencyB_ms: number;
   pingMs: number;
   source: string;
+  dataQuality: DataQuality;
 }
 
 export type FeedStatus = "live" | "cached" | "degraded" | "unavailable";

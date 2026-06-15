@@ -1,1 +1,3 @@
 - [Reachable market data APIs from Replit](reachable-market-apis.md) — which public APIs work vs. are blocked (Binance/Bybit=blocked, OKX+Coinbase+CBOE+YF-with-Referer=working)
+- [Yahoo Finance symbol quirks](yahoo-finance-symbols.md) — forex pairs (XAUUSD=X, XAGUSD=X) unreliable; use CME futures (GC=F, SI=F) directly; volume is in contracts not USD — must multiply by CONTRACT_MULTIPLIERS.
+- [Pathfinder reality-first data contracts](pathfinder-reality-first.md) — LiveFeedData nullable fields + DataQuality; gemini.ts variable-declaration order; no Math.random anywhere; generateMockFeed removed.

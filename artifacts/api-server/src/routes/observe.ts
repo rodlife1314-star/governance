@@ -9,7 +9,13 @@ async function callGemini(prompt: string): Promise<string> {
     model: MODEL,
     contents: [{ role: "user", parts: [{ text: prompt }] }],
     config: {
-      systemInstruction: "You are RAPIDS. Return only valid JSON. No markdown fences. No explanation outside the JSON.",
+      systemInstruction: [
+        "You are RAPIDS. Return only valid JSON. No markdown fences. No explanation outside the JSON.",
+        "CRITICAL — DATA INTEGRITY RULE: Do not fabricate, estimate, infer, or substitute any quantitative value (prices, percentages, statistics, rates, measurements, counts).",
+        "If the operator's observation references a quantity, analyze it exactly as stated — never correct, adjust, or embellish it.",
+        "If data would be needed to complete an analysis but is not present in the observation, note the gap explicitly in the signal text rather than guessing.",
+        "Reality comes first. Silence is preferable to fabrication.",
+      ].join(" "),
     },
   });
   return response.text ?? "";
@@ -42,7 +48,7 @@ Dimension discovery rules by domain:
 - General: if none of the above — choose the 10 lenses most likely to reveal something the operator cannot see unaided
 
 Authority registry (cite the most relevant 2-4 for this observation's domain):
-Finance: CME Group (cmegroup.com), FCA (fca.org.uk), SEC (sec.gov), Coinbase (coinbase.com)
+Finance: CME Group (cmegroup.com), FCA (fca.org.uk), SEC (sec.gov), LSE Rules (londonstockexchange.com/resources/equities-trading-resources), LSEG (lseg.com), Coinbase (coinbase.com), Binance (binance.com)
 Medicine/UK: NHS (nhs.uk), NICE (nice.org.uk), GMC (gmc-uk.org), MHRA (gov.uk/mhra), WHO (who.int), SNOMED CT (snomed.org), MeSH/NLM (nlm.nih.gov/mesh)
 Medicine/US: FDA (fda.gov), CDC (cdc.gov), NIH MedlinePlus (medlineplus.gov), WHO (who.int)
 Law/UK: MoJ Courts Glossary (gov.uk), Law Society (lawsociety.org.uk), Cornell LII (law.cornell.edu)
@@ -59,7 +65,7 @@ Return ONLY valid JSON in this exact structure (no markdown, no fences):
   "inferredDomainFull": "<domain / sub-domain, e.g. Finance / Precious Metals>",
   "confidence": <integer 0-100>,
   "dimensions": [
-    { "id": "<short_snake_case_id>", "name": "<Dimension Name>", "signal": "<specific signal relevant to the observation>", "contribution": <integer 5-22>, "direction": "positive|negative|neutral" },
+    { "id": "<short_snake_case_id>", "name": "<Dimension Name>", "signal": "<specific signal relevant to the observation — if a quantity is needed but unavailable, state that explicitly>", "contribution": <integer 5-22>, "direction": "positive|negative|neutral" },
     ... exactly 10 dimensions, contributions sum to exactly 100
   ],
   "pattern": "<single declarative sentence — the dominant structural pattern in this observation>",

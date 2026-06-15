@@ -6,6 +6,13 @@ import { randomUUID } from "crypto";
 
 const router = Router();
 
+// ── Timestamp helper ──────────────────────────────────────────────────────────
+
+function nowTs() {
+  const n = new Date();
+  return `${String(n.getHours()).padStart(2,"0")}:${String(n.getMinutes()).padStart(2,"0")}:${String(n.getSeconds()).padStart(2,"0")}.${String(n.getMilliseconds()).padStart(3,"0")}`;
+}
+
 // ── Yahoo Finance helper ──────────────────────────────────────────────────────
 
 const YF_HEADERS = {
@@ -16,7 +23,13 @@ const YF_HEADERS = {
   "Origin": "https://finance.yahoo.com",
 };
 
-async function fetchYFPrice(symbol: string): Promise<{ price: number; prevClose: number }> {
+interface YFTicker {
+  price: number;
+  prevClose: number;
+  volume: number | null;
+}
+
+async function fetchYFTicker(symbol: string): Promise<YFTicker> {
   const url = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1d`;
   const res = await fetch(url, { headers: YF_HEADERS, signal: AbortSignal.timeout(7000) });
   if (!res.ok) throw new Error(`Yahoo Finance HTTP ${res.status} for ${symbol}`);
@@ -25,182 +38,243 @@ async function fetchYFPrice(symbol: string): Promise<{ price: number; prevClose:
   const price = meta?.regularMarketPrice as number;
   if (!price) throw new Error(`Yahoo Finance: no price for ${symbol}`);
   const prevClose = (meta?.previousClose ?? meta?.chartPreviousClose ?? price) as number;
-  return { price, prevClose };
+  const volume = typeof meta?.regularMarketVolume === "number" ? meta.regularMarketVolume as number : null;
+  return { price, prevClose, volume };
 }
 
-// ── Asset config ──────────────────────────────────────────────────────────────
+// ── CoinGecko response types ──────────────────────────────────────────────────
 
-const ASSET_YF_SYMBOLS: Record<string, string> = {
-  XAU:  "GC=F",
-  NDX:  "^NDX",
-  US30: "^DJI",
-  XAG:  "SI=F",
+interface CoinGeckoGlobal {
+  data: {
+    market_cap_percentage: { btc: number; [key: string]: number };
+  };
+}
+
+interface CoinGeckoBitcoin {
+  market_data: {
+    total_volume: { usd: number };
+    current_price: { usd: number };
+  };
+}
+
+// ── Asset symbol maps ─────────────────────────────────────────────────────────
+// Note: XAUUSD=X and XAGUSD=X are not reliably served by Yahoo Finance's chart API.
+// Using CME futures symbols as primary reference for precious metals — these ARE the
+// standard market reference prices. For indices, we fetch both cash and futures.
+
+const SPOT_SYMBOLS: Record<string, string> = {
+  XAU:  "GC=F",   // CME gold futures — primary price reference for gold
+  NDX:  "^NDX",   // NASDAQ 100 cash index
+  US30: "^DJI",   // Dow Jones Industrial Average
+  XAG:  "SI=F",   // CME silver futures — primary price reference for silver
+};
+
+const FUTURES_SYMBOLS: Record<string, string> = {
+  XAU:  "GC=F",   // same source — cash/futures basis not available via Yahoo Finance
+  NDX:  "NQ=F",   // E-mini NASDAQ 100 futures (Chicago Mercantile Exchange)
+  US30: "YM=F",   // E-mini DJIA futures (Chicago Mercantile Exchange)
+  XAG:  "SI=F",   // same source — cash/futures basis not available via Yahoo Finance
 };
 
 const ASSET_SOURCES: Record<string, string> = {
-  XAU:  "Yahoo Finance / CME Gold",
-  NDX:  "Yahoo Finance / Nasdaq",
-  US30: "Yahoo Finance / DJIA",
-  XAG:  "Yahoo Finance / CME Silver",
+  XAU:  "Yahoo Finance (GC=F / CME Gold Futures)",
+  NDX:  "Yahoo Finance (^NDX cash) / Yahoo Finance (NQ=F E-mini)",
+  US30: "Yahoo Finance (^DJI cash) / Yahoo Finance (YM=F E-mini)",
+  XAG:  "Yahoo Finance (SI=F / CME Silver Futures)",
 };
 
-// Simulated market microstructure params per asset (applied on top of real spot price)
-const ASSET_MICRO: Record<string, {
-  basisPct: number; spreadFraction: number;
-  volumeBase: number; oiBase: number;
-  depthBase: number; btcDominance: number;
-}> = {
-  XAU:  { basisPct: 0.0008, spreadFraction: 0.00005, volumeBase: 185e9, oiBase: 58e9, depthBase: 2200, btcDominance: 0 },
-  NDX:  { basisPct: 0.0005, spreadFraction: 0.00003, volumeBase: 98e9,  oiBase: 42e9, depthBase: 1500, btcDominance: 0 },
-  US30: { basisPct: 0.0004, spreadFraction: 0.00003, volumeBase: 76e9,  oiBase: 31e9, depthBase: 1200, btcDominance: 0 },
-  XAG:  { basisPct: 0.0012, spreadFraction: 0.0001,  volumeBase: 24e9,  oiBase: 8e9,  depthBase: 800,  btcDominance: 0 },
+// CME contract multipliers for USD notional conversion.
+// Yahoo Finance regularMarketVolume is in contracts, not USD.
+// GC=F: 100 troy oz/contract; SI=F: 5000 troy oz/contract;
+// NQ=F: $20/point (E-mini NASDAQ 100); YM=F: $5/point (E-mini DJIA mini)
+const CONTRACT_MULTIPLIERS: Record<string, number> = {
+  "GC=F": 100,      // 100 oz / contract
+  "SI=F": 5000,     // 5000 oz / contract
+  "NQ=F": 20,       // $20 per index point
+  "YM=F": 5,        // $5 per index point
 };
-
-function nowTs() {
-  const n = new Date();
-  return `${String(n.getHours()).padStart(2,"0")}:${String(n.getMinutes()).padStart(2,"0")}:${String(n.getSeconds()).padStart(2,"0")}.${String(n.getMilliseconds()).padStart(3,"0")}`;
-}
 
 // ── Live feed route ───────────────────────────────────────────────────────────
 
 router.get("/sovereign/live-feed", async (req, res) => {
   const asset = String(req.query.asset || "BTC").toUpperCase();
+  const t0 = Date.now();
   const ts = nowTs();
-  const latA = 12 + Math.random() * 20;
-  const latB = 18 + Math.random() * 20;
 
-  // ── BTC: Coinbase spot ──────────────────────────────────────────────────────
+  // ── BTC: Coinbase spot + CoinGecko market data ────────────────────────────
+  // Note: Binance is geo-restricted from this environment. Using CoinGecko for
+  // 24h volume and BTC dominance — both are real, sourced from aggregated exchange data.
+  // BTC perp futures price is unavailable without an accessible exchange API.
   if (asset === "BTC") {
-    try {
-      const response = await fetch(
-        "https://api.coinbase.com/v2/prices/BTC-USD/spot",
-        { headers: { "Accept": "application/json" }, signal: AbortSignal.timeout(5000) }
-      );
-      if (!response.ok) throw new Error("Coinbase API error");
-      const data = await response.json() as { data: { amount: string } };
-      const spot = parseFloat(data.data.amount);
-      const basisRaw = 35 + Math.random() * 120;
-      const future = spot + basisRaw;
-      res.json({
-        success: true,
-        coinbaseSpotPrice: spot.toFixed(2),
-        cmeFuturePrice: future.toFixed(2),
-        btcDominance: 58.4 + Math.random() * 1.2,
-        volume: 26000000000 + Math.random() * 5000000000,
-        spreadSpot: 0.6 + Math.random() * 0.5,
-        spreadFutures: 2.2 + Math.random() * 1.2,
-        depthBidsSpot: 400 + Math.random() * 60,
-        depthAsksSpot: 390 + Math.random() * 60,
-        depthBidsFutures: 300 + Math.random() * 60,
-        depthAsksFutures: 290 + Math.random() * 60,
-        openInterest: 14000000000 + Math.random() * 2000000000,
-        futuresBasis: basisRaw / spot,
-        timestampA: ts,
-        timestampB: ts,
-        latencyA_ms: parseFloat(latA.toFixed(1)),
-        latencyB_ms: parseFloat(latB.toFixed(1)),
-        pingMs: Math.floor(latA),
-        source: "Coinbase",
-      });
-    } catch {
-      const spot = 108425 + Math.random() * 500;
-      const basis = 35 + Math.random() * 80;
-      res.json({
-        success: true,
-        coinbaseSpotPrice: spot.toFixed(2),
-        cmeFuturePrice: (spot + basis).toFixed(2),
-        btcDominance: 58.4 + Math.random() * 1.2,
-        volume: 26000000000 + Math.random() * 5000000000,
-        spreadSpot: 0.6 + Math.random() * 0.5,
-        spreadFutures: 2.2 + Math.random() * 1.2,
-        depthBidsSpot: 400 + Math.random() * 60,
-        depthAsksSpot: 390 + Math.random() * 60,
-        depthBidsFutures: 300 + Math.random() * 60,
-        depthAsksFutures: 290 + Math.random() * 60,
-        openInterest: 14000000000 + Math.random() * 2000000000,
-        futuresBasis: basis / spot,
-        timestampA: ts,
-        timestampB: ts,
-        latencyA_ms: parseFloat(latA.toFixed(1)),
-        latencyB_ms: parseFloat(latB.toFixed(1)),
-        pingMs: Math.floor(latA),
-        source: "Simulated",
-      });
+    const [coinbaseRes, geckoGlobalRes, geckoBtcRes] =
+      await Promise.allSettled([
+        fetch("https://api.coinbase.com/v2/prices/BTC-USD/spot", {
+          headers: { "Accept": "application/json" },
+          signal: AbortSignal.timeout(5000),
+        }),
+        fetch("https://api.coingecko.com/api/v3/global", {
+          headers: { "Accept": "application/json" },
+          signal: AbortSignal.timeout(8000),
+        }),
+        fetch("https://api.coingecko.com/api/v3/coins/bitcoin?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false", {
+          headers: { "Accept": "application/json" },
+          signal: AbortSignal.timeout(8000),
+        }),
+      ]);
+
+    const latencyMs = Date.now() - t0;
+
+    // Coinbase spot (primary mandatory source)
+    let spot: number | null = null;
+    if (coinbaseRes.status === "fulfilled" && coinbaseRes.value.ok) {
+      try {
+        const data = await coinbaseRes.value.json() as { data: { amount: string } };
+        spot = parseFloat(data.data.amount);
+        if (isNaN(spot)) spot = null;
+      } catch { /* spot stays null */ }
     }
+
+    // CoinGecko global — BTC dominance
+    let btcDominance: number | null = null;
+    if (geckoGlobalRes.status === "fulfilled" && geckoGlobalRes.value.ok) {
+      try {
+        const g = await geckoGlobalRes.value.json() as CoinGeckoGlobal;
+        btcDominance = g.data?.market_cap_percentage?.btc ?? null;
+      } catch { /* stays null */ }
+    }
+
+    // CoinGecko coins/bitcoin — 24h volume (aggregated across all exchanges)
+    let volume: number | null = null;
+    if (geckoBtcRes.status === "fulfilled" && geckoBtcRes.value.ok) {
+      try {
+        const g = await geckoBtcRes.value.json() as CoinGeckoBitcoin;
+        volume = g.market_data?.total_volume?.usd ?? null;
+      } catch { /* stays null */ }
+    }
+
+    // Spot is mandatory — if unavailable, refuse to serve fabricated data
+    if (spot === null) {
+      res.json({
+        success: false,
+        error: "Coinbase spot feed unavailable — no data served",
+        source: "unavailable",
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      coinbaseSpotPrice: spot.toFixed(2),
+      cmeFuturePrice: spot.toFixed(2),  // futures unavailable — showing spot as reference
+      btcDominance,
+      volume,
+      spreadSpot:       null,  // requires exchange WebSocket — unavailable via REST
+      spreadFutures:    null,
+      depthBidsSpot:    null,  // requires exchange order book — unavailable via REST
+      depthAsksSpot:    null,
+      depthBidsFutures: null,
+      depthAsksFutures: null,
+      openInterest:     null,  // requires CME/exchange subscription
+      futuresBasis:     0,     // futures price unavailable — basis cannot be computed
+      timestampA: ts,
+      timestampB: ts,
+      latencyA_ms: latencyMs,
+      latencyB_ms: latencyMs,
+      pingMs: latencyMs,
+      source: "Coinbase (spot) / CoinGecko (volume, dominance)",
+      dataQuality: {
+        spot:      "live",
+        futures:   "unavailable",  // Binance geo-restricted; CME requires subscription
+        volume:    volume        !== null ? "live" : "unavailable",
+        oi:        "unavailable",  // requires CME subscription or exchange API
+        dominance: btcDominance  !== null ? "live" : "unavailable",
+        depth:     "unavailable",  // requires exchange WebSocket or order book API
+      },
+    });
     return;
   }
 
-  // ── Non-BTC: Yahoo Finance ──────────────────────────────────────────────────
-  const symbol = ASSET_YF_SYMBOLS[asset];
-  const micro  = ASSET_MICRO[asset];
-  const source = ASSET_SOURCES[asset] ?? "Yahoo Finance";
+  // ── Non-BTC: Yahoo Finance spot + futures ───────────────────────────────────
+  const spotSymbol    = SPOT_SYMBOLS[asset];
+  const futuresSymbol = FUTURES_SYMBOLS[asset];
+  const source        = ASSET_SOURCES[asset] ?? "Yahoo Finance";
 
-  if (!symbol || !micro) {
+  if (!spotSymbol || !futuresSymbol) {
     res.status(400).json({ success: false, error: `Unknown asset: ${asset}` });
     return;
   }
 
-  try {
-    const { price } = await fetchYFPrice(symbol);
-    const basisRaw = price * micro.basisPct * (0.6 + Math.random() * 0.8);
-    const future = price + basisRaw;
-    const spread = price * micro.spreadFraction;
-    const depth  = micro.depthBase * (0.9 + Math.random() * 0.2);
-    const dp = price < 100 ? 3 : 2;
+  const [spotResult, futuresResult] = await Promise.allSettled([
+    fetchYFTicker(spotSymbol),
+    fetchYFTicker(futuresSymbol),
+  ]);
+
+  const latencyMs = Date.now() - t0;
+
+  const spotData    = spotResult.status    === "fulfilled" ? spotResult.value    : null;
+  const futuresData = futuresResult.status === "fulfilled" ? futuresResult.value : null;
+
+  // Both feeds down — refuse to fabricate
+  if (spotData === null && futuresData === null) {
     res.json({
-      success: true,
-      coinbaseSpotPrice: price.toFixed(dp),
-      cmeFuturePrice:    future.toFixed(dp),
-      btcDominance:      0,
-      volume:            micro.volumeBase * (0.95 + Math.random() * 0.1),
-      spreadSpot:        spread,
-      spreadFutures:     spread * 1.4,
-      depthBidsSpot:     depth,
-      depthAsksSpot:     depth * 0.95,
-      depthBidsFutures:  depth * 1.6,
-      depthAsksFutures:  depth * 1.55,
-      openInterest:      micro.oiBase * (0.97 + Math.random() * 0.06),
-      futuresBasis:      basisRaw / price,
-      timestampA:        ts,
-      timestampB:        ts,
-      latencyA_ms:       parseFloat(latA.toFixed(1)),
-      latencyB_ms:       parseFloat(latB.toFixed(1)),
-      pingMs:            Math.floor(latA),
-      source,
+      success: false,
+      error: `Yahoo Finance feeds unavailable for ${asset} — no data served`,
+      source: "unavailable",
     });
-  } catch {
-    // Fallback: use simulated basePrice from asset config
-    const BASE_PRICES: Record<string, number> = {
-      XAU: 2320, NDX: 19500, US30: 39200, XAG: 29.5,
-    };
-    const spot = BASE_PRICES[asset] ?? 1000;
-    const basisRaw = spot * micro.basisPct;
-    const spread = spot * micro.spreadFraction;
-    const depth  = micro.depthBase;
-    const dp = spot < 100 ? 3 : 2;
-    res.json({
-      success: true,
-      coinbaseSpotPrice: spot.toFixed(dp),
-      cmeFuturePrice:    (spot + basisRaw).toFixed(dp),
-      btcDominance:      0,
-      volume:            micro.volumeBase,
-      spreadSpot:        spread,
-      spreadFutures:     spread * 1.4,
-      depthBidsSpot:     depth,
-      depthAsksSpot:     depth * 0.95,
-      depthBidsFutures:  depth * 1.6,
-      depthAsksFutures:  depth * 1.55,
-      openInterest:      micro.oiBase,
-      futuresBasis:      basisRaw / spot,
-      timestampA:        ts,
-      timestampB:        ts,
-      latencyA_ms:       parseFloat(latA.toFixed(1)),
-      latencyB_ms:       parseFloat(latB.toFixed(1)),
-      pingMs:            Math.floor(latA),
-      source:            `${source} (Simulated)`,
-    });
+    return;
   }
+
+  const spotPrice    = spotData?.price    ?? null;
+  const futuresPrice = futuresData?.price ?? null;
+
+  // Need at least spot or futures to have a reference price
+  const refPrice = spotPrice ?? futuresPrice!;
+  const dp = refPrice < 100 ? 3 : 2;
+
+  const futuresBasis = (spotPrice !== null && futuresPrice !== null)
+    ? (futuresPrice - spotPrice) / spotPrice
+    : 0;
+
+  // Compute USD notional volume from contract count × multiplier × reference price.
+  // Yahoo Finance regularMarketVolume is in contracts, not USD.
+  const futuresMultiplier = CONTRACT_MULTIPLIERS[futuresSymbol] ?? null;
+  const rawContractVolume = futuresData?.volume ?? null;
+  const usdNotionalVolume = (rawContractVolume !== null && futuresMultiplier !== null)
+    ? rawContractVolume * futuresMultiplier * refPrice
+    : null;
+
+  res.json({
+    success: true,
+    coinbaseSpotPrice: (spotPrice ?? futuresPrice!).toFixed(dp),
+    cmeFuturePrice:    (futuresPrice ?? spotPrice!).toFixed(dp),
+    btcDominance: null,
+    volume:           usdNotionalVolume,
+    spreadSpot:       null,
+    spreadFutures:    null,
+    depthBidsSpot:    null,
+    depthAsksSpot:    null,
+    depthBidsFutures: null,
+    depthAsksFutures: null,
+    openInterest:     null,
+    futuresBasis,
+    timestampA: ts,
+    timestampB: ts,
+    latencyA_ms: latencyMs,
+    latencyB_ms: latencyMs,
+    pingMs: latencyMs,
+    source,
+    dataQuality: {
+      spot:      spotData    !== null ? "live" : "unavailable",
+      futures:   futuresData !== null ? "live" : "unavailable",
+      volume:    (futuresData?.volume ?? null) !== null ? "live" : "unavailable",
+      oi:        "unavailable",
+      dominance: "unavailable",
+      depth:     "unavailable",
+    },
+  });
 });
+
+// ── Sovereign audits ──────────────────────────────────────────────────────────
 
 router.get("/sovereign/audits", async (req, res) => {
   try {
@@ -248,6 +322,8 @@ router.post("/sovereign/audits", async (req, res) => {
     res.status(500).json({ success: false, error: "Failed to record audit" });
   }
 });
+
+// ── Language authorities ──────────────────────────────────────────────────────
 
 router.get("/language/authorities", async (req, res) => {
   try {
