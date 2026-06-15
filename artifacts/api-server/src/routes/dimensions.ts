@@ -11,6 +11,8 @@ export interface FeedRecord {
   name: string;
   authority: string;
   authorityUrl: string;
+  definitionAuthority: string;
+  definitionUrl: string;
   packetId: string;
   value: number | null;
   valueLabel: string;
@@ -146,6 +148,8 @@ interface FeedDef {
   name: string;
   authority: string;
   authorityUrl: string;
+  definitionAuthority: string;
+  definitionUrl: string;
   refreshMs: number;
   valueUnit: string;
   context: string;
@@ -159,6 +163,8 @@ const FEED_DEFS: FeedDef[] = [
     name: "Dollar / DXY",
     authority: "Open Exchange Rates API",
     authorityUrl: "https://open.er-api.com",
+    definitionAuthority: "ICE (Intercontinental Exchange)",
+    definitionUrl: "https://www.ice.com/usdollarindex",
     refreshMs: 300_000,
     valueUnit: "index",
     context: "EUR/USD inverse as DXY directional proxy (EUR ≈ 57.6% of DXY weight). Higher value = stronger USD = headwind for risk assets including BTC.",
@@ -177,6 +183,8 @@ const FEED_DEFS: FeedDef[] = [
     name: "Real Yields / 10Y Treasury",
     authority: "U.S. Treasury via Yahoo Finance",
     authorityUrl: "https://finance.yahoo.com/quote/%5ETNX",
+    definitionAuthority: "U.S. Treasury / Federal Reserve",
+    definitionUrl: "https://home.treasury.gov/resource-center/data-chart-center/interest-rates",
     refreshMs: 300_000,
     valueUnit: "%",
     context: "10-Year Treasury yield (nominal). Proxy for rate environment — rising yields compress risk asset multiples. TIPS real yield = nominal − breakeven inflation.",
@@ -196,6 +204,8 @@ const FEED_DEFS: FeedDef[] = [
     name: "Institutional Flows / OI",
     authority: "OKX Exchange Public API",
     authorityUrl: "https://www.okx.com/api/v5/public/open-interest?instType=SWAP&instId=BTC-USDT-SWAP",
+    definitionAuthority: "CFTC (Commodity Futures Trading Commission)",
+    definitionUrl: "https://www.cftc.gov/LearnAndProtect/AdvisoriesAndArticles/CFTCGlossary/index.htm",
     refreshMs: 120_000,
     valueUnit: "USD",
     context: "BTC-USDT perpetual swap open interest in USD from OKX. Rising OI with rising price = strong institutional demand. Falling OI = deleveraging.",
@@ -214,6 +224,8 @@ const FEED_DEFS: FeedDef[] = [
     name: "Futures Positioning / Funding",
     authority: "OKX Exchange Public API",
     authorityUrl: "https://www.okx.com/api/v5/public/funding-rate?instId=BTC-USDT-SWAP",
+    definitionAuthority: "BIS (Bank for International Settlements)",
+    definitionUrl: "https://www.bis.org/publ/work803.htm",
     refreshMs: 120_000,
     valueUnit: "rate",
     context: "BTC perpetual funding rate from OKX. Positive = longs paying shorts (bullish crowding). Negative = shorts paying longs (bearish pressure). Settles every 8 hours.",
@@ -234,6 +246,8 @@ const FEED_DEFS: FeedDef[] = [
     name: "China / CNY Signal",
     authority: "Open Exchange Rates API",
     authorityUrl: "https://open.er-api.com",
+    definitionAuthority: "BIS FX Statistics",
+    definitionUrl: "https://www.bis.org/statistics/xrusd.htm",
     refreshMs: 300_000,
     valueUnit: "CNY/USD",
     context: "USD/CNY exchange rate as China capital flow proxy. Weaker CNY (higher number) signals capital seeking alternatives. BTC demand from mainland China correlates with CNY depreciation pressure.",
@@ -251,6 +265,8 @@ const FEED_DEFS: FeedDef[] = [
     name: "Risk Sentiment / VIX",
     authority: "CBOE Global Indices (cdn.cboe.com)",
     authorityUrl: "https://cdn.cboe.com/api/global/us_indices/daily_prices/VIX_History.csv",
+    definitionAuthority: "CBOE Global Markets",
+    definitionUrl: "https://www.cboe.com/tradable_products/vix/",
     refreshMs: 3_600_000,
     valueUnit: "index",
     context: "CBOE Volatility Index daily close from CBOE's own data feed. VIX < 15 = complacency. VIX 15–25 = moderate uncertainty. VIX > 25 = elevated fear. Inversely correlated with risk assets.",
@@ -269,6 +285,8 @@ const FEED_DEFS: FeedDef[] = [
     name: "Commodity Complex / WTI",
     authority: "CME Group via Yahoo Finance",
     authorityUrl: "https://finance.yahoo.com/quote/CL%3DF",
+    definitionAuthority: "EIA (U.S. Energy Information Administration)",
+    definitionUrl: "https://www.eia.gov/petroleum/",
     refreshMs: 300_000,
     valueUnit: "USD/bbl",
     context: "WTI crude oil front-month futures. Commodity risk-on correlates with BTC macro backdrop. Rising crude = expansion signal = favorable environment for risk assets.",
@@ -288,6 +306,8 @@ const FEED_DEFS: FeedDef[] = [
     name: "Geopolitics",
     authority: "NO AUTHORITY FEED",
     authorityUrl: "",
+    definitionAuthority: "Operator field observation",
+    definitionUrl: "",
     refreshMs: Infinity,
     valueUnit: "",
     context: "No suitable free real-time geopolitical risk API available without subscription. Operator field observation required. Dimension held at neutral until human authority supplied.",
@@ -299,6 +319,8 @@ const FEED_DEFS: FeedDef[] = [
     name: "Technology Demand / QQQ",
     authority: "Nasdaq via Yahoo Finance",
     authorityUrl: "https://finance.yahoo.com/quote/QQQ",
+    definitionAuthority: "Nasdaq Global Indexes",
+    definitionUrl: "https://indexes.nasdaqomx.com/index/overview/NDX",
     refreshMs: 300_000,
     valueUnit: "USD",
     context: "Invesco QQQ ETF (Nasdaq-100). Tech sector risk appetite proxy for institutional demand for growth assets. Strong QQQ = favorable macro environment for BTC institutional allocation.",
@@ -318,6 +340,8 @@ const FEED_DEFS: FeedDef[] = [
     name: "Liquidity / Market Depth",
     authority: "Coinbase Exchange Public Ticker API",
     authorityUrl: "https://api.exchange.coinbase.com",
+    definitionAuthority: "FINRA Glossary",
+    definitionUrl: "https://www.finra.org/investors/learn-to-invest/glossary",
     refreshMs: 30_000,
     valueUnit: "USD",
     context: "BTC-USD live bid/ask spread and 24h volume from Coinbase Exchange order book ticker. Tighter spread = deeper liquidity = lower execution cost for institutional size.",
@@ -343,9 +367,15 @@ async function fetchFeed(def: FeedDef): Promise<FeedRecord> {
   const cached = CACHE.get(def.id);
   const cacheAge = cached ? now - cached.fetchedAt : Infinity;
 
+  const defFields = {
+    definitionAuthority: def.definitionAuthority,
+    definitionUrl: def.definitionUrl,
+  };
+
   if (def.unavailableByDesign) {
     return {
       id: def.id, name: def.name, authority: def.authority, authorityUrl: def.authorityUrl,
+      ...defFields,
       packetId: makePacketId(def.id), value: null,
       valueLabel: "UNAVAILABLE — no authority feed by design",
       valueUnit: def.valueUnit, fetchedAt: now, dataTimestamp: null,
@@ -366,6 +396,7 @@ async function fetchFeed(def: FeedDef): Promise<FeedRecord> {
     const result = await def.fetch();
     const record: FeedRecord = {
       id: def.id, name: def.name, authority: def.authority, authorityUrl: def.authorityUrl,
+      ...defFields,
       packetId: makePacketId(def.id), value: result.value, valueLabel: result.valueLabel,
       valueUnit: def.valueUnit, fetchedAt: now, dataTimestamp: result.dataTimestamp,
       refreshIntervalMs: def.refreshMs, status: "live", cacheAgeMs: 0,
@@ -387,6 +418,7 @@ async function fetchFeed(def: FeedDef): Promise<FeedRecord> {
     }
     return {
       id: def.id, name: def.name, authority: def.authority, authorityUrl: def.authorityUrl,
+      ...defFields,
       packetId: makePacketId(def.id), value: null, valueLabel: "UNAVAILABLE",
       valueUnit: def.valueUnit, fetchedAt: now, dataTimestamp: null,
       refreshIntervalMs: def.refreshMs, status: "unavailable", cacheAgeMs: 0,

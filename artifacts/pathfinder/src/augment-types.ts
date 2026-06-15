@@ -42,6 +42,8 @@ export interface FeedRecord {
   name: string;
   authority: string;
   authorityUrl: string;
+  definitionAuthority: string;
+  definitionUrl: string;
   packetId: string;
   value: number | null;
   valueLabel: string;

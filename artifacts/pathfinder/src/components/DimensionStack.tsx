@@ -61,26 +61,49 @@ function AuthorityPanel({ feed }: { feed: FeedRecord }) {
 
   return (
     <div className={`mx-3 mb-2 rounded border ${cfg.border} ${cfg.bg} p-3 space-y-2`}>
-      {/* Top row: authority + status */}
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <div className="text-[8px] font-mono text-[#4A5568] uppercase tracking-wider mb-0.5">Authority</div>
-          {feed.authorityUrl ? (
+      {/* Top row: status badge */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-[8px] font-mono text-[#4A5568] uppercase tracking-wider">Feed Authority</div>
+        <FeedStatusBadge status={feed.status} />
+      </div>
+
+      {/* Data source */}
+      <div>
+        <div className="text-[7.5px] font-mono text-[#3A4555] uppercase tracking-wider mb-0.5">Data Source</div>
+        {feed.authorityUrl ? (
+          <a
+            href={feed.authorityUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className={`text-[9px] font-mono ${cfg.text} hover:underline leading-tight block`}
+          >
+            {feed.authority}
+          </a>
+        ) : (
+          <div className={`text-[9px] font-mono ${cfg.text}`}>{feed.authority}</div>
+        )}
+      </div>
+
+      {/* Definitional authority */}
+      {feed.definitionAuthority && (
+        <div>
+          <div className="text-[7.5px] font-mono text-[#3A4555] uppercase tracking-wider mb-0.5">Definition Authority</div>
+          {feed.definitionUrl ? (
             <a
-              href={feed.authorityUrl}
+              href={feed.definitionUrl}
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className={`text-[9px] font-mono ${cfg.text} hover:underline leading-tight block`}
+              className="text-[9px] font-mono text-[#64D2FF] hover:underline leading-tight block"
             >
-              {feed.authority}
+              {feed.definitionAuthority}
             </a>
           ) : (
-            <div className={`text-[9px] font-mono ${cfg.text}`}>{feed.authority}</div>
+            <div className="text-[9px] font-mono text-[#64D2FF]/60">{feed.definitionAuthority}</div>
           )}
         </div>
-        <FeedStatusBadge status={feed.status} />
-      </div>
+      )}
 
       {/* Value */}
       {feed.value !== null && (
