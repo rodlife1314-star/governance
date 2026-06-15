@@ -23,23 +23,23 @@ export const ASSETS: AssetConfig[] = [
     volume: 26e9, openInterest: 14e9, spreadFraction: 0.00001, depthUnits: "BTC",
   },
   {
-    id: "XAU", label: "Gold", pair: "XAU/USD", source: "LBMA/CME",
-    live: false, basePrice: 2320, futuresPremiumPct: 0.0008,
+    id: "XAU", label: "Gold", pair: "XAU/USD", source: "Yahoo Finance / CME Gold",
+    live: true, basePrice: 2320, futuresPremiumPct: 0.0008,
     volume: 185e9, openInterest: 58e9, spreadFraction: 0.00005, depthUnits: "oz",
   },
   {
-    id: "NDX", label: "NASDAQ", pair: "NDX/USD", source: "CME/CBOE",
-    live: false, basePrice: 19500, futuresPremiumPct: 0.0005,
+    id: "NDX", label: "NASDAQ", pair: "NDX/USD", source: "Yahoo Finance / Nasdaq",
+    live: true, basePrice: 19500, futuresPremiumPct: 0.0005,
     volume: 98e9, openInterest: 42e9, spreadFraction: 0.00003, depthUnits: "contracts",
   },
   {
-    id: "US30", label: "US 30", pair: "US30/USD", source: "CME/DJIA",
-    live: false, basePrice: 39200, futuresPremiumPct: 0.0004,
+    id: "US30", label: "US 30", pair: "US30/USD", source: "Yahoo Finance / DJIA",
+    live: true, basePrice: 39200, futuresPremiumPct: 0.0004,
     volume: 76e9, openInterest: 31e9, spreadFraction: 0.00003, depthUnits: "contracts",
   },
   {
-    id: "XAG", label: "Silver", pair: "XAG/USD", source: "LBMA/CME",
-    live: false, basePrice: 29.5, futuresPremiumPct: 0.0012,
+    id: "XAG", label: "Silver", pair: "XAG/USD", source: "Yahoo Finance / CME Silver",
+    live: true, basePrice: 29.5, futuresPremiumPct: 0.0012,
     volume: 24e9, openInterest: 8e9, spreadFraction: 0.0001, depthUnits: "oz",
   },
 ];

@@ -91,16 +91,17 @@ export default function App() {
 
   // ── Dimension feeds ────────────────────────────────────────────────────────
 
-  const fetchDimensionFeeds = useCallback(async () => {
+  const fetchDimensionFeeds = useCallback(async (assetId?: AssetId) => {
+    const id = assetId ?? selectedAsset;
     try {
-      const res = await fetch(getAbsoluteUrl("/api/dimensions/feeds"));
+      const res = await fetch(getAbsoluteUrl(`/api/dimensions/feeds?asset=${id}`));
       if (!res.ok) return;
       const data = await res.json();
       if (data.success && Array.isArray(data.feeds)) {
         setDimensionFeeds(data.feeds as FeedRecord[]);
       }
     } catch { /* preserve last known feeds */ }
-  }, []);
+  }, [selectedAsset]);
 
   // ── Analysis trigger ──────────────────────────────────────────────────────
 
@@ -167,7 +168,7 @@ export default function App() {
     feedLoadingRef.current = true;
     setFeedLoading(true);
     try {
-      const res  = await fetch(getAbsoluteUrl("/api/sovereign/live-feed"));
+      const res  = await fetch(getAbsoluteUrl(`/api/sovereign/live-feed?asset=${id}`));
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.success) { setLiveFeed(data); return data as LiveFeedData; }
@@ -229,10 +230,12 @@ export default function App() {
   const handleAssetChange = useCallback(async (id: AssetId) => {
     setSelectedAsset(id);
     setAnalysis(null);
+    setDimensionFeeds([]);
     stopPolling();
+    fetchDimensionFeeds(id);
     const feed = await fetchLiveFeed(id);
     if (feed) triggerAnalysis(feed, id);
-  }, [fetchLiveFeed, triggerAnalysis, stopPolling]);
+  }, [fetchLiveFeed, triggerAnalysis, stopPolling, fetchDimensionFeeds]);
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -241,7 +244,7 @@ export default function App() {
     (async () => {
       const feed = await fetchLiveFeed("BTC");
       if (feed) triggerAnalysis(feed, "BTC");
-      fetchDimensionFeeds();
+      fetchDimensionFeeds("BTC");
     })();
   }, []);
 

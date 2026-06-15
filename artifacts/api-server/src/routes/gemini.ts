@@ -191,12 +191,13 @@ const rapidsCache: RapidsCache = {
   assetKey: null,
 };
 
+// dim5 name overrides per asset — id is always "onchain" to match the feed ID
 const ASSET_DIMENSIONS: Record<string, { id: string; name: string }> = {
-  BTC:  { id: "onchain",    name: "On-Chain Activity" },
-  XAU:  { id: "safehaven",  name: "Safe Haven Flow" },
-  NDX:  { id: "earnings",   name: "Earnings / Growth" },
-  US30: { id: "industrial", name: "Industrial Output" },
-  XAG:  { id: "industrial", name: "Industrial Demand" },
+  BTC:  { id: "onchain", name: "On-Chain Activity" },
+  XAU:  { id: "onchain", name: "Precious Metals Ratio" },
+  NDX:  { id: "onchain", name: "Growth Appetite" },
+  US30: { id: "onchain", name: "Long Bond Signal" },
+  XAG:  { id: "onchain", name: "Gold / Silver Ratio" },
 };
 
 // ── Feed section builder ────────────────────────────────────────────────────
@@ -228,10 +229,10 @@ async function runDimensionalAnalysis(body: Record<string, unknown>) {
     assetKey, assetLabel, assetPair,
   } = body as Record<string, number & string>;
 
-  // Fetch real authority feeds in parallel with any prep work
+  // Fetch real authority feeds for this specific asset
   let feeds: FeedRecord[] = [];
   try {
-    feeds = await fetchAllFeeds();
+    feeds = await fetchAllFeeds(asset);
   } catch {
     // Proceed with empty feeds — Gemini will note unavailable data
   }
@@ -243,12 +244,23 @@ async function runDimensionalAnalysis(body: Record<string, unknown>) {
   const dim5   = ASSET_DIMENSIONS[asset] ?? ASSET_DIMENSIONS["BTC"];
   const feedSection = buildFeedSection(feeds);
 
+  // Asset-specific feed names for dynamic prompt slots
+  const instflowsFeed = feeds.find((f) => f.id === "instflows");
+  const futuresFeed   = feeds.find((f) => f.id === "futures");
+  const onchainFeed   = feeds.find((f) => f.id === "onchain");
+  const liquidityFeed = feeds.find((f) => f.id === "liquidity");
+
+  const instflowsName = instflowsFeed?.name ?? "Institutional Flows";
+  const futuresName   = futuresFeed?.name   ?? "Futures Positioning";
+  const onchainName   = onchainFeed?.name   ?? dim5.name;
+  const liquidityName = liquidityFeed?.name ?? "Liquidity / Depth";
+
   const prompt = `You are RAPIDS, an augmentation instrument AI performing dimensional analysis for an operator.
 
 LIVE FIELD DATA — ${pair}:
 - Asset: ${label} (${pair})
 - Spot Price: $${spotPrice}
-- Futures Price: $${futuresPrice} [NOTE: simulated basis — not CME settlement]
+- Futures Price: $${futuresPrice} [NOTE: simulated basis — not exchange settlement]
 - Basis Delta: $${(basisDelta as number)?.toFixed(2)} (${marketStructure})
 - Basis %: ${((futuresBasis as number ?? 0) * 100).toFixed(4)}%
 - 24h Volume: $${((volume as number ?? 0) / 1e9).toFixed(2)}B [simulated]
@@ -258,26 +270,26 @@ LIVE FIELD DATA — ${pair}:
 - Source: ${source}
 
 ${feedSection}
-INSTRUCTION: Use the AUTHORITY DIMENSION FEEDS above as the primary signal for each corresponding dimension. Where a feed is LIVE or CACHED, anchor your signal and direction to that real value. Where a feed is UNAVAILABLE or DEGRADED, state the data gap explicitly in the signal text — do not fabricate a value.
+INSTRUCTION: Use the AUTHORITY DIMENSION FEEDS above as the primary signal for each corresponding dimension. Where a feed is LIVE or CACHED, anchor your signal and direction to that real value. Where a feed is UNAVAILABLE or DEGRADED, state the data gap explicitly in the signal text — do not fabricate a value. All signals must be relevant to ${label} — do not reference BTC-specific metrics when analyzing other assets.
 
 Compress this ${label} market field into 10 dimensional readings. Contribution values must sum to exactly 100. Return ONLY valid JSON — no markdown, no explanation, no code fences.
 
 {
   "dimensions": [
-    { "id": "dollar", "name": "Dollar / DXY", "signal": "<signal grounded in DXY authority feed value>", "contribution": <int 5-20>, "direction": "positive|negative|neutral" },
-    { "id": "realyields", "name": "Real Yields", "signal": "<signal grounded in TIPS authority feed value>", "contribution": <int 5-20>, "direction": "positive|negative|neutral" },
-    { "id": "instflows", "name": "Institutional Flows", "signal": "<signal grounded in Binance OI authority feed>", "contribution": <int 5-20>, "direction": "positive|negative|neutral" },
-    { "id": "futures", "name": "Futures Positioning", "signal": "<signal grounded in Binance funding rate authority feed>", "contribution": <int 5-20>, "direction": "positive|negative|neutral" },
-    { "id": "${dim5.id}", "name": "${dim5.name}", "signal": "<signal specific to ${label} using CNY or asset-specific authority feed>", "contribution": <int 5-15>, "direction": "positive|negative|neutral" },
-    { "id": "risksentiment", "name": "Risk Sentiment", "signal": "<signal grounded in VIX authority feed value>", "contribution": <int 5-15>, "direction": "positive|negative|neutral" },
-    { "id": "commodity", "name": "Commodity Complex", "signal": "<signal grounded in WTI authority feed value>", "contribution": <int 5-20>, "direction": "positive|negative|neutral" },
+    { "id": "dollar", "name": "Dollar / DXY", "signal": "<signal grounded in DXY authority feed value — impact on ${label}>", "contribution": <int 5-20>, "direction": "positive|negative|neutral" },
+    { "id": "realyields", "name": "Real Yields", "signal": "<signal grounded in 10Y Treasury authority feed value — impact on ${label}>", "contribution": <int 5-20>, "direction": "positive|negative|neutral" },
+    { "id": "instflows", "name": "${instflowsName}", "signal": "<signal grounded in ${instflowsName} authority feed value>", "contribution": <int 5-20>, "direction": "positive|negative|neutral" },
+    { "id": "futures", "name": "${futuresName}", "signal": "<signal grounded in ${futuresName} authority feed value>", "contribution": <int 5-20>, "direction": "positive|negative|neutral" },
+    { "id": "onchain", "name": "${onchainName}", "signal": "<signal grounded in ${onchainName} authority feed value — specific to ${label}>", "contribution": <int 5-15>, "direction": "positive|negative|neutral" },
+    { "id": "risksentiment", "name": "Risk Sentiment / VIX", "signal": "<signal grounded in VIX authority feed value — impact on ${label}>", "contribution": <int 5-15>, "direction": "positive|negative|neutral" },
+    { "id": "commodity", "name": "Commodity Complex / WTI", "signal": "<signal grounded in WTI authority feed value>", "contribution": <int 5-20>, "direction": "positive|negative|neutral" },
     { "id": "geopolitics", "name": "Geopolitics", "signal": "<if UNAVAILABLE: state 'No authority feed — operator assessment required'>", "contribution": <int 3-8>, "direction": "neutral" },
-    { "id": "technical", "name": "Technical Structure", "signal": "<signal grounded in QQQ authority feed and spot price>", "contribution": <int 8-22>, "direction": "positive|negative|neutral" },
-    { "id": "liquidity", "name": "Liquidity / Depth", "signal": "<signal grounded in Coinbase spread authority feed>", "contribution": <int 5-15>, "direction": "positive|negative|neutral" }
+    { "id": "technical", "name": "Technical Structure / QQQ", "signal": "<signal grounded in QQQ authority feed and ${label} spot price>", "contribution": <int 8-22>, "direction": "positive|negative|neutral" },
+    { "id": "liquidity", "name": "${liquidityName}", "signal": "<signal grounded in ${liquidityName} authority feed value>", "contribution": <int 5-15>, "direction": "positive|negative|neutral" }
   ],
   "pattern": "<single declarative sentence describing dominant ${label} market structure, referencing real feed values>",
-  "findings": ["<finding citing real authority feed value>","<finding citing real feed>","<finding citing real feed>","<finding citing real feed>","<finding citing real feed>"],
-  "simonSummary": "<2-3 sentence synthesis citing specific real feed values>",
+  "findings": ["<finding citing real authority feed value relevant to ${label}>","<finding citing real feed>","<finding citing real feed>","<finding citing real feed>","<finding citing real feed>"],
+  "simonSummary": "<2-3 sentence synthesis citing specific real feed values — all analysis must be ${label}-specific>",
   "rapidsCompression": "10 dimensions → <N> primary drivers → <pattern name>"
 }`;
 
