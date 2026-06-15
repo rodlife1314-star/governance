@@ -1,0 +1,148 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+  font-family: 'Space Mono', monospace;
+}
+
+.hud-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.hud-title {
+  position: absolute;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #00ff41;
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  border: 1px solid rgba(0,255,65,0.3);
+  padding: 6px 16px;
+  background: rgba(0,0,0,0.6);
+}
+
+.hud-status {
+  position: absolute;
+  bottom: 24px;
+  left: 24px;
+  color: rgba(0,255,65,0.5);
+  font-family: 'Space Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  line-height: 1.8;
+}
+
+.hud-hint {
+  position: absolute;
+  bottom: 24px;
+  right: 24px;
+  color: rgba(0,255,65,0.35);
+  font-family: 'Space Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  text-align: right;
+  line-height: 1.8;
+}
+
+.hud-selected {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  color: #00ff41;
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  border-left: 2px solid #00ff41;
+  padding: 8px 12px;
+  background: rgba(0,0,0,0.8);
+  max-width: 240px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.hud-selected.visible {
+  opacity: 1;
+}
+
+/* Wall HTML panels */
+.wall-panel {
+  font-family: 'Space Mono', monospace;
+  background: rgba(0, 0, 0, 0.85);
+  border: 1px solid currentColor;
+  width: 280px;
+  padding: 0;
+  cursor: pointer;
+  user-select: none;
+  transform: translateX(-50%);
+}
+
+.wall-panel-header {
+  padding: 10px 14px;
+  font-size: 9px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  border-bottom: 1px solid currentColor;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wall-panel-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.wall-panel-body {
+  padding: 12px 14px;
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  line-height: 1.9;
+  color: rgba(255,255,255,0.6);
+}
+
+.wall-panel-row {
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  padding: 4px 0;
+}
+
+.wall-panel-row:last-child {
+  border-bottom: none;
+}
+
+.wall-panel-key {
+  color: rgba(255,255,255,0.35);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+}
+
+.wall-panel-val {
+  color: rgba(255,255,255,0.75);
+  text-align: right;
+}
+
+.wall-panel.active {
+  box-shadow: 0 0 20px currentColor;
+}
