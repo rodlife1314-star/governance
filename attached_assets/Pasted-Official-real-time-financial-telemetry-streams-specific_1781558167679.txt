@@ -1,0 +1,73 @@
+Official real-time financial telemetry streams (specifically low-latency WebSockets) require authentication tokens, meaning they do not provide single-click "public URLs" without an API key. However, several top-tier official providers offer completely free tiers with live WebSocket stream endpoints. [1, 2, 3, 4] 
+The primary official telemetry endpoints and how to connect to them are outlined below.
+------------------------------
+## 1. Cryptocurrencies (No-Token/Public WebSockets) [5] 
+Crypto exchanges are the only institutional entities that expose high-throughput live streaming telemetry entirely for free without requiring a signed registration or API key. [6] 
+
+* Coinbase Advanced Trade Telemetry
+* Endpoint: wss://://coinbase.com
+   * Capability: Level 2 order books, real-time ticker heartbeats, and raw match executions. [3] 
+* Binance Spot Market Stream
+* Endpoint: wss://://binance.com (or /stream?streams=)
+   * Capability: Tick-by-tick aggregate trades, 24hr rolling window statistics, and live K-line/candlestick pushes. [3, 7] 
+* Polymarket Real-Time Data Socket (RTDS)
+* Endpoint: wss://://polymarket.com
+   * Capability: Zero-auth live pricing streams for major crypto assets sourced directly from institutional Chainlink or Binance feeds. [6, 8] 
+
+------------------------------
+## 2. US Equities & Forex (Free Tier via WebSockets) [9] 
+To protect exchange licensing rights (e.g., Consolidated Tape Association rules), stock telemetry requires registering a free developer profile to grab a standard access token. [2, 7, 10] 
+
+* Finnhub.io
+* Endpoint: [Finnhub WebSocket Documentation](https://finnhub.io/docs/api/websocket-trades) -> wss://ws.finnhub.io?token=YOUR_API_KEY
+   * Capability: Real-time trades for US stocks, 15-minute delayed international exchanges, and live forex/crypto streaming. [2, 11, 12] 
+* Alpaca Markets
+* Endpoint: [Alpaca Market Data API](https://docs.alpaca.markets/us/docs/real-time-crypto-pricing-data) -> wss://stream.data.alpaca.markets/v2/iex (or /v1beta1/crypto)
+   * Capability: Free Tier feeds via the IEX exchange offering full quote, trade, and 1-minute interval bar updates. [3, 10, 13, 14, 15] 
+* Twelve Data
+* Endpoint: [Twelve Data Developer Portal](https://twelvedata.com/) -> wss://://twelvedata.com
+   * Capability: Real-time stock, forex, and cryptocurrency tracking with sub-second latency constraints. [16, 17] 
+
+------------------------------
+## 3. Quick Connection Reference Template
+To stream live telemetry immediately, utilize a command-line tool like websocat or a Python script to initiate the connection handshake. [7, 18] 
+For example, to tap into the public Coinbase feed instantly without an account:
+
+# 1. Connect to the telemetry server via terminal
+websocat wss://://coinbase.com
+# 2. Paste the JSON subscription payload directly into the open connection
+{
+    "type": "subscribe",
+    "product_ids": ["BTC-USD"],
+    "channels": ["ticker"]
+}
+
+------------------------------
+If you need help building out your data pipeline, please specify:
+
+* Which specific asset classes you need to monitor (e.g., Options, Commodities, global equities).
+* Your preferred programming language (e.g., Python, Node.js, Go).
+* The maximum latency thresholds required for your system. [4, 7, 19, 20, 21] 
+
+
+[1] [https://www.reddit.com](https://www.reddit.com/r/algotrading/comments/1nzqrl8/what_preferably_free_apis_are_preferred_for/)
+[2] [https://finnhub.io](https://finnhub.io/docs/api)
+[3] [https://github.com](https://github.com/bytewax/awesome-public-real-time-datasets)
+[4] [https://medium.com](https://medium.com/@wutainfofu/best-real-time-stock-market-data-apis-compared-2026-guide-6335773814bc)
+[5] [https://londonstrategicedge.com](https://londonstrategicedge.com/websockets/)
+[6] [https://docs.polymarket.com](https://docs.polymarket.com/market-data/websocket/rtds)
+[7] [https://medium.com](https://medium.com/@wutainfofu/best-real-time-stock-market-data-apis-compared-2026-guide-6335773814bc)
+[8] [https://www.quantvps.com](https://www.quantvps.com/blog/news-driven-polymarket-bots)
+[9] [https://www.fortraders.com](https://www.fortraders.com/blog/data-sources-building-trading-algorithms)
+[10] [https://www.bitget.com](https://www.bitget.com/wiki/free-real-time-stock-quotes)
+[11] https://finnhub.io
+[12] [https://finnhub.io](https://finnhub.io/docs/api/websocket-trades)
+[13] [https://www.youtube.com](https://www.youtube.com/watch?v=e5Jmn_cjBjQ&t=10)
+[14] [https://docs.alpaca.markets](https://docs.alpaca.markets/us/docs/real-time-crypto-pricing-data)
+[15] [https://www.reddit.com](https://www.reddit.com/r/webdev/comments/13gqx4d/im_looking_for_real_time_stock_market_api/)
+[16] https://twelvedata.com
+[17] [https://finage.co.uk](https://finage.co.uk/blog/how-to-choose-the-right-market-data-provider-for-your-trading-app--687d284bac41ac186560afac)
+[18] [https://www.youtube.com](https://www.youtube.com/watch?v=OZTBlLY90TA)
+[19] https://finage.co.uk
+[20] [https://finnhub.io](https://finnhub.io/docs/api/market-news)
+[21] https://eodhd.com
