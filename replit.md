@@ -60,6 +60,15 @@ _Populate as you build — explicit user instructions worth remembering across s
 - Routing engine is deterministic (no LLM call) — scores are computed via keyword signals and query length heuristics
 - The `executionMode` column in `workflow_steps` is stored as `execution_mode` in the DB (Drizzle camelCase mapping)
 
+## GitHub Sync
+
+The workspace is connected to GitHub for code backup and sharing:
+
+- **Remote**: `origin https://github.com/rodlife1314-star/governance.git`
+- **Auth**: Uses `GITHUB_TOKEN` secret (classic PAT with `repo` scope) stored via `git credential.helper store`
+- **Push**: `git push origin main` — run this after any checkpoint to sync to GitHub
+- **Note**: Repo was originally named `octagon-augment`, renamed to `governance` on GitHub; both URLs work (GitHub redirects)
+
 ## Pointers
 
 - See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
