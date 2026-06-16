@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getAbsoluteUrl } from "./utils";
-import { LiveFeedData, DimensionalAnalysis, FeedRecord, Finding, ObservationAnalysis } from "./augment-types";
+import { LiveFeedData, DimensionalAnalysis, FeedRecord, Finding, ObservationAnalysis, CoverageReport } from "./augment-types";
 import { AssetId, ASSETS, getAsset } from "./assets";
 import { DomainId, getDomain } from "./domains";
 
@@ -13,6 +13,7 @@ import OperatorChannel from "./components/OperatorChannel";
 import ActionPanel from "./components/ActionPanel";
 import DomainStandby from "./components/DomainStandby";
 import ObservationAperture from "./components/ObservationAperture";
+import CoverageGate from "./components/CoverageGate";
 import ObservationResult from "./components/ObservationResult";
 
 type Mode = "augment" | "archive" | "action";
@@ -34,13 +35,15 @@ interface AuditRecord {
   divergenceDelta: number;
 }
 
-type AppState = "aperture" | "analyzing" | "result" | "field";
+type AppState = "aperture" | "analyzing" | "coverage" | "result" | "field";
 
 export default function App() {
   // ── Top-level app state ────────────────────────────────────────────────────
   const [appState, setAppState] = useState<AppState>("aperture");
   const [rawObservation, setRawObservation] = useState("");
   const [observationAnalysis, setObservationAnalysis] = useState<ObservationAnalysis | null>(null);
+  const [coverageReport, setCoverageReport] = useState<CoverageReport | null>(null);
+  const [analysisReady, setAnalysisReady] = useState(false);
   const fieldEnteredRef = useRef(false);
 
   // ── Field mode state ───────────────────────────────────────────────────────
@@ -249,22 +252,34 @@ export default function App() {
 
   const handleObservationSubmit = useCallback(async (text: string) => {
     setRawObservation(text);
-    setAppState("analyzing");
-    try {
-      const res = await fetch(getAbsoluteUrl("/api/observe"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ observation: text }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setObservationAnalysis(data as ObservationAnalysis);
-        setAppState("result");
-      } else {
-        setAppState("aperture");
-      }
-    } catch {
-      setAppState("aperture");
+    setCoverageReport(null);
+    setObservationAnalysis(null);
+    setAnalysisReady(false);
+
+    // Fire both requests immediately — coverage is fast (keyword scoring),
+    // analysis is slow (Gemini). Coverage gate appears first; SIMON follows.
+    const coveragePromise = fetch(getAbsoluteUrl("/api/observe/coverage"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ observation: text }),
+    }).then(r => r.json()).catch(() => null);
+
+    const analysisPromise = fetch(getAbsoluteUrl("/api/observe"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ observation: text }),
+    }).then(r => r.json()).catch(() => null);
+
+    // Coverage resolves first → enter coverage gate
+    const covData = await coveragePromise;
+    if (covData?.success) setCoverageReport(covData as CoverageReport);
+    setAppState("coverage");
+
+    // Analysis resolves later → mark ready (button lights up in CoverageGate)
+    const analysisData = await analysisPromise;
+    if (analysisData?.success) {
+      setObservationAnalysis(analysisData as ObservationAnalysis);
+      setAnalysisReady(true);
     }
   }, []);
 
@@ -359,7 +374,24 @@ export default function App() {
           />
         )}
 
-        {/* ── ANALYZING: RAPIDS computing ───────────────────────────────────── */}
+        {/* ── COVERAGE GATE: domain / authorities / sources / coverage % ──────── */}
+        {appState === "coverage" && (
+          <CoverageGate
+            key="coverage"
+            observation={rawObservation}
+            report={coverageReport}
+            analysisReady={analysisReady}
+            onViewAnalysis={() => setAppState("result")}
+            onNewObservation={() => {
+              setCoverageReport(null);
+              setObservationAnalysis(null);
+              setAnalysisReady(false);
+              setAppState("aperture");
+            }}
+          />
+        )}
+
+        {/* ── ANALYZING: brief fallback loading state ───────────────────────── */}
         {appState === "analyzing" && (
           <motion.div
             key="analyzing"

@@ -1,5 +1,7 @@
 import { Router } from "express";
 import { ai } from "@workspace/integrations-gemini-ai";
+import { db, domainAuthorities, dataSources } from "@workspace/db";
+import { eq, asc } from "drizzle-orm";
 
 const router = Router();
 const MODEL = "gemini-2.5-flash";
@@ -125,6 +127,110 @@ function buildFallback(observation: string) {
     citedAuthorities: [] as Array<{ shortName: string; name: string; url: string; tier: string; relevance: string }>,
   };
 }
+
+// ── Step 3: Domain Router — keyword scoring, no Gemini ────────────────────
+
+const DOMAIN_SIGNALS: Record<string, { primary: string[]; secondary: string[] }> = {
+  Finance: {
+    primary: ["price", "btc", "bitcoin", "gold", "silver", "xau", "xag", "futures", "basis", "contango", "backwardation", "yield", "spread", "dollar", "dxy", "equity", "crypto", "inflation", "fed", "fomc", "nasdaq", "lme", "cme", "etf"],
+    secondary: ["market", "rate", "fund", "trade", "exchange", "vol", "volatility", "bond", "index", "asset", "hedge", "short", "long", "options", "commodit"],
+  },
+  Medicine: {
+    primary: ["patient", "symptom", "diagnosis", "clinical", "drug", "dose", "therapy", "disease", "syndrome", "fever", "pain", "cardiac", "neuro", "pulmonary", "oncolog", "patholog", "presenting", "anemia", "hypertension", "diabetes", "pupil", "dilation"],
+    secondary: ["health", "medical", "treatment", "blood", "tissue", "cell", "test", "scan", "hospital", "biopsy", "imaging", "mri", "ct", "lab"],
+  },
+  Law: {
+    primary: ["contract", "clause", "court", "statute", "jurisdiction", "liability", "damages", "plaintiff", "defendant", "arbitration", "appeal", "breach", "notice", "counterparty", "indemnit"],
+    secondary: ["legal", "compliance", "agreement", "filing", "evidence", "precedent", "counsel", "regulatory", "tort", "injunction", "settlement"],
+  },
+  Technology: {
+    primary: ["latency", "server", "database", "api", "cpu", "memory", "cache", "deployment", "vulnerability", "dependency", "microservice", "garbage collection", "throughput", "uptime", "cve", "kubernetes"],
+    secondary: ["system", "software", "hardware", "network", "code", "architecture", "performance", "security", "service", "container", "timeout", "spike"],
+  },
+  Astrophysics: {
+    primary: ["spectral", "wavelength", "nm", "flux", "photometric", "magnitude", "orbit", "parsec", "stellar", "galactic", "emission", "absorption", "hydrogen", "spectrograph", "photometry", "656", "light curve"],
+    secondary: ["telescope", "star", "galaxy", "cosmic", "space", "astronomical", "nebula", "quasar", "redshift", "supernova", "pulsar", "spectra"],
+  },
+};
+
+function detectDomain(text: string): { domain: string; confidence: number } {
+  const lower = text.toLowerCase();
+  const scores: Record<string, number> = {};
+  for (const [domain, signals] of Object.entries(DOMAIN_SIGNALS)) {
+    let score = 0;
+    for (const kw of signals.primary) if (lower.includes(kw)) score += 3;
+    for (const kw of signals.secondary) if (lower.includes(kw)) score += 1;
+    scores[domain] = score;
+  }
+  const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+  const [topDomain, topScore] = sorted[0];
+  if (topScore === 0) return { domain: "General", confidence: 30 };
+  const confidence = Math.min(95, Math.round(42 + (topScore / 15) * 53));
+  return { domain: topDomain, confidence };
+}
+
+// ── Steps 1+2+4: Source Registry + Coverage Calculator + Obs→Source Match ──
+
+router.post("/observe/coverage", async (req, res) => {
+  const { observation } = req.body;
+  if (!observation || typeof observation !== "string" || observation.trim().length === 0) {
+    res.status(400).json({ success: false, error: "observation is required" });
+    return;
+  }
+  const trimmed = observation.trim();
+
+  try {
+    const { domain, confidence } = detectDomain(trimmed);
+
+    const [authRows, sourceRows] = await Promise.all([
+      domain === "General"
+        ? db.select().from(domainAuthorities)
+            .where(eq(domainAuthorities.active, true))
+            .orderBy(asc(domainAuthorities.sortOrder))
+            .limit(6)
+        : db.select().from(domainAuthorities)
+            .where(eq(domainAuthorities.domain, domain))
+            .orderBy(asc(domainAuthorities.sortOrder)),
+      domain === "General"
+        ? Promise.resolve([] as typeof dataSources.$inferSelect[])
+        : db.select().from(dataSources)
+            .where(eq(dataSources.domain, domain)),
+    ]);
+
+    const live  = sourceRows.filter(s => !s.authRequired);
+    const gated = sourceRows.filter(s =>  s.authRequired);
+    const coveragePct = sourceRows.length === 0 ? 0 : Math.round((live.length / sourceRows.length) * 100);
+
+    const byTier = (tier: string) => authRows.filter(a => a.tier === tier);
+
+    res.json({
+      success:    true,
+      domain,
+      domainFull: domain === "General" ? "General — awaiting classification" : domain,
+      confidence,
+      authorities: {
+        primary:    byTier("primary"),
+        regulatory: byTier("regulatory"),
+        reference:  byTier("reference"),
+        standard:   byTier("standard"),
+        glossary:   byTier("glossary"),
+      },
+      dataSources: sourceRows,
+      coverage: {
+        totalSources: sourceRows.length,
+        liveSources:  live.length,
+        gatedSources: gated.length,
+        coveragePct,
+        gaps: gated.map(s => `${s.shortName} — authentication required`),
+      },
+    });
+  } catch (err: any) {
+    req.log.error(err, "coverage check failed");
+    res.status(500).json({ success: false, error: "coverage check failed" });
+  }
+});
+
+// ── SIMON full analysis ────────────────────────────────────────────────────
 
 router.post("/observe", async (req, res) => {
   const { observation } = req.body;

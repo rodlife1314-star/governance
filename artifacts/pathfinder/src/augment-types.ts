@@ -36,6 +36,57 @@ export interface ObservationAnalysis extends DimensionalAnalysis {
   citedAuthorities?: CitedAuthority[];
 }
 
+// ── Coverage gate types ────────────────────────────────────────────────────
+
+export interface AuthorityRecord {
+  id: string;
+  domain: string;
+  name: string;
+  shortName: string;
+  jurisdiction: string;
+  url: string;
+  tier: string;
+  description: string;
+  active: boolean;
+}
+
+export interface DataSourceRecord {
+  id: string;
+  domain: string;
+  name: string;
+  shortName: string;
+  endpointUrl: string;
+  updateFrequency: string;
+  authRequired: boolean;
+  dataType: string;
+  description: string;
+  active: boolean;
+  notes: string | null;
+}
+
+export interface CoverageReport {
+  domain: string;
+  domainFull: string;
+  confidence: number;
+  authorities: {
+    primary:    AuthorityRecord[];
+    regulatory: AuthorityRecord[];
+    reference:  AuthorityRecord[];
+    standard:   AuthorityRecord[];
+    glossary:   AuthorityRecord[];
+  };
+  dataSources: DataSourceRecord[];
+  coverage: {
+    totalSources: number;
+    liveSources:  number;
+    gatedSources: number;
+    coveragePct:  number;
+    gaps:         string[];
+  };
+}
+
+// ── Live feed types ────────────────────────────────────────────────────────
+
 export type DataQualityStatus = "live" | "snapshot" | "unavailable";
 
 export interface DataQuality {
