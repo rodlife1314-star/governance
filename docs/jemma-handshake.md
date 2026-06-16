@@ -201,6 +201,154 @@ The RAPIDS compression output is what Rod reads before deciding whether to seal 
 
 ---
 
+## DOMAIN REGISTRY — ALL FIVE DOMAINS
+
+Pathfinder currently has five domains in the UI. Finance is the only live domain with real data feeds. The other four are wired to the authority registry and coverage gate but show STANDBY in the field interface — their RAPIDS lenses and authority libraries are defined and ready; the live data feeds are the missing piece.
+
+---
+
+### DOMAIN 1 — FINANCE (LIVE)
+*Status: Fully live with real-time data*
+
+**RAPIDS Lenses (10):**
+Dollar/DXY · Real Yields · Inst. Flows · Futures · On-Chain · Risk/VIX · Commodity · Geopolitics · Technical · Liquidity
+
+**Live Assets tracked:**
+| ID | Instrument | Pair | Source |
+|----|-----------|------|--------|
+| BTC | Bitcoin | BTC/USD | Coinbase (real-time) |
+| XAU | Gold | XAU/USD | Yahoo Finance GC=F (15min delay) |
+| NDX | NASDAQ 100 | NDX/USD | Yahoo Finance ^NDX / NQ=F |
+| US30 | Dow Jones | US30/USD | Yahoo Finance ^DJI / YM=F |
+| XAG | Silver | XAG/USD | Yahoo Finance SI=F |
+
+**Authority Registry:**
+| Authority | Short | Jurisdiction | Tier | Role |
+|-----------|-------|-------------|------|------|
+| CME Group | CME | US | Primary | World's largest derivatives exchange — BTC, Gold, FX, rates futures |
+| Coinbase Exchange | Coinbase | US | Reference / Live Feed | Primary BTC/USD spot price feed for RAPIDS |
+| Financial Conduct Authority | FCA | UK | Regulatory | UK financial services conduct authority |
+| US Securities and Exchange Commission | SEC | US | Regulatory | US federal securities regulator |
+
+**Data Sources:**
+- **Coinbase API** — real-time BTC/USD spot (`api.coinbase.com/v2/prices/BTC-USD/spot`) · no auth
+- **Yahoo Finance Futures** — 15-min delayed GC=F, SI=F, ^NDX, ^DJI · no auth
+- **CME DataMine** — EOD open interest, all futures contracts · subscription required (current RAPIDS OI values are microstructure models, not live CME feeds)
+
+---
+
+### DOMAIN 2 — MEDICINE (STANDBY)
+*Status: Authority registry live · RAPIDS lenses defined · live data feeds not yet wired*
+
+**RAPIDS Lenses (10):**
+Pathophysiology · Pharmacology · Lab Markers · Imaging · Risk Factors · Evidence Base · Guidelines · Contraindications · Prognosis · Intervention
+
+**Authority Registry:**
+| Authority | Short | Jurisdiction | Tier | Role |
+|-----------|-------|-------------|------|------|
+| NHS Conditions | NHS | UK | Primary | UK patient-facing medical terminology and conditions index |
+| NICE | NICE | UK | Primary | UK evidence-based clinical guidelines and terminology standards |
+| General Medical Council | GMC | UK | Regulatory | UK regulator for doctors — fitness to practise standards |
+| MHRA | MHRA | UK | Regulatory | UK regulator for medicines and medical devices |
+| US Food and Drug Administration | FDA | US | Primary | US federal drug, biologics, and device regulator |
+| CDC Health Literacy | CDC | US | Reference | Plain-language disease and health terminology |
+| NIH MedlinePlus | MedlinePlus | US | Reference | Peer-reviewed plain-language definitions backed by NIH |
+| World Health Organization | WHO | International | Primary | UN global health — ICD codes, disease classifications |
+| SNOMED CT | SNOMED CT | International | Standard | International clinical terminology standard for codeable medical terms |
+| MeSH (NLM) | MeSH | US | Standard | NLM controlled vocabulary for biomedical literature indexing |
+
+**Data Sources:**
+- **ClinicalTrials.gov API** — REST v2 · daily updates · no auth · returns JSON
+- **Cochrane Library** — gold-standard systematic reviews · monthly · free for abstracts · no public REST API
+
+---
+
+### DOMAIN 3 — LAW (STANDBY)
+*Status: Authority registry live · RAPIDS lenses defined · live data feeds not yet wired*
+
+**RAPIDS Lenses (10):**
+Precedent · Statute · Jurisdiction · Burden of Proof · Evidence Weight · Timeline · Damages · Appeal Paths · Regulatory · Compliance
+
+**Authority Registry:**
+| Authority | Short | Jurisdiction | Tier | Role |
+|-----------|-------|-------------|------|------|
+| HMCTS (His Majesty's Courts & Tribunals) | HMCTS | UK | Primary | Official UK judiciary — courts, tribunals, judicial terminology |
+| The Law Society | Law Society | UK | Regulatory | Governing body for solicitors in England and Wales |
+| Cornell Legal Information Institute | Cornell LII | US | Reference | Free US federal and state law dictionary and encyclopedia |
+| Black's Law Dictionary | Black's Law | US | Reference | Standard legal reference dictionary for US common law |
+| Merriam-Webster's Dictionary of Law | MW Legal | US | Glossary | Legal terms with plain-language context |
+| USLegal Glossary | USLegal | US | Glossary | Practical legal definitions and sample forms |
+
+**Data Sources:**
+- **BAILII** — British and Irish case law · daily · no auth · no API (HTML only) · covers England, Wales, Scotland, Northern Ireland, Ireland
+
+---
+
+### DOMAIN 4 — IT / APPLIED SCIENCES (STANDBY)
+*Status: Authority registry live · RAPIDS lenses defined · live data feeds not yet wired*
+
+**RAPIDS Lenses (10):**
+Complexity · Security · Performance · Scalability · Tech Debt · Dependencies · Coverage · Observability · Architecture · Data Flow
+
+**Authority Registry:**
+| Authority | Short | Jurisdiction | Tier | Role |
+|-----------|-------|-------------|------|------|
+| ACM | ACM | International | Standard | World's largest computing professional society |
+| IETF | IETF | International | Standard | Internet standards — protocols and RFCs |
+| W3C | W3C | International | Standard | Web standards — HTML, CSS, accessibility, semantic web |
+| ISO/IEC JTC1 | ISO/IEC JTC1 | International | Standard | Joint ISO/IEC committee for information technology standards |
+| IEEE | IEEE | International | Standard | Largest technical professional organisation — electrical and electronics |
+| NIST | NIST | US | Primary | Root US measurement and standards — most domain bodies align with NIST |
+| ASME | ASME | US/International | Standard | Mechanical engineering codes and standards |
+| ICE | ICE | UK | Regulatory | UK professional body for civil engineers |
+
+---
+
+### DOMAIN 5 — ASTROPHYSICS (STANDBY)
+*Status: Authority registry live · RAPIDS lenses defined · multiple live data feeds available*
+
+**RAPIDS Lenses (10):**
+Photometric · Spectral · Orbital · Temporal · Energetic · Spatial · Cosmological · Instrument Cal. · Catalog · Prediction
+
+**Authority Registry:**
+| Authority | Short | Jurisdiction | Tier | Role |
+|-----------|-------|-------------|------|------|
+| NASA | NASA | US | Primary | US national space science authority |
+| NASA Astrophysics Data System | NASA ADS | US | Reference | Research paper and citation archive — Harvard/NASA managed |
+| European Space Agency | ESA | EU | Primary | European intergovernmental space authority |
+| European Southern Observatory | ESO | EU/International | Primary | Operates the VLT and world's most productive ground-based telescopes |
+| NASA Science Education | NASA Science | US | Glossary | Missions, discoveries, plain-language astronomical concepts |
+| International Astronomical Union | IAU | International | Standard | Root authority for astronomical naming, terminology, and classification |
+| arXiv (astro-ph) | arXiv | International | Reference | Open-access preprint repository for astrophysics research |
+
+**Data Sources:**
+- **NASA Open APIs** (APOD, NEO, EPIC) — daily/real-time · free API key from api.nasa.gov
+- **NOAA SWPC** — real-time solar activity, geomagnetic indices · no auth · `services.swpc.noaa.gov/json`
+- **Space-Track** — US Space Command orbital telemetry (TLEs) · real-time · free registration
+- **MAST** (Hubble, JWST archive) — near-real-time · no auth for public data
+- **ESA Sky** — interactive multi-wavelength sky viewer · REST API available · no auth
+- **Simbad** — astronomical object catalog · TAP/ADQL endpoint · no auth
+- **VizieR** — 20,000+ astronomical data tables · TAP endpoint · no auth
+- **SDSS SkyServer** — DR18 sky survey · SQL query API · no auth
+
+---
+
+### CROSS-DOMAIN STANDARDS (SUPPLEMENTARY)
+
+These authorities apply across multiple domains in the registry:
+
+| Authority | Short | Jurisdiction | Role |
+|-----------|-------|-------------|------|
+| ISO | ISO | International | Root international standards body |
+| BSI | BSI | UK | UK national standards body — BS standards across all sectors |
+| ASTM International | ASTM | International | Materials testing and product standards |
+| Materials Project (DOE) | Materials Project | US | DOE open database of computed materials properties |
+| USGS | USGS | US | Geology, hydrology, biology, geography |
+| UK Met Office | Met Office | UK | National meteorological service — weather and climate |
+| IPCC | IPCC | International | UN climate science assessment body |
+
+---
+
 ## THE ARCHITECTURE (LAYER MAP)
 
 ```
