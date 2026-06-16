@@ -484,6 +484,8 @@ export default function App() {
                             loading={analysisLoading}
                             rapidsCompression={analysis?.rapidsCompression || ""}
                             feeds={dimensionFeeds}
+                            assetKey={selectedAsset}
+                            assetLabel={getAsset(selectedAsset).label}
                           />
                           <SimonPanel
                             pattern={analysis?.pattern || ""}
@@ -509,6 +511,8 @@ export default function App() {
                               loading={analysisLoading}
                               rapidsCompression={analysis?.rapidsCompression || ""}
                               feeds={dimensionFeeds}
+                              assetKey={selectedAsset}
+                              assetLabel={getAsset(selectedAsset).label}
                             />
                           )}
                           {augmentTab === "intel" && (

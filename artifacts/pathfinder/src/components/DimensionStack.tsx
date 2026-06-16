@@ -1,12 +1,183 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { DimensionEntry, FeedRecord, FeedStatus } from "../augment-types";
+import { getAbsoluteUrl } from "../utils";
 
 interface DimensionStackProps {
   dimensions: DimensionEntry[];
   loading: boolean;
   rapidsCompression: string;
   feeds?: FeedRecord[];
+  assetKey?: string;
+  assetLabel?: string;
+}
+
+interface LocateResult {
+  usesRegisteredAuthority: boolean;
+  authorityShortName: string;
+  authorityName: string;
+  authorityUrl: string;
+  endpointDescription: string;
+  endpointUrl: string;
+  refreshCycle: string;
+  authRequired: boolean;
+  confidence: "high" | "medium" | "low";
+  notes: string;
+}
+
+const CONFIDENCE_COLOR: Record<string, string> = {
+  high:   "text-emerald-400",
+  medium: "text-[#E0AF68]",
+  low:    "text-rose-400",
+};
+
+function AuthorityGapPanel({
+  dim,
+  assetKey,
+  assetLabel,
+}: {
+  dim: DimensionEntry;
+  assetKey: string;
+  assetLabel: string;
+}) {
+  const [locating, setLocating] = useState(false);
+  const [result,   setResult]   = useState<LocateResult | null>(null);
+  const [error,    setError]    = useState<string | null>(null);
+
+  const handleLocate = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setLocating(true);
+    setError(null);
+    try {
+      const res = await fetch(getAbsoluteUrl("/api/authorities/locate-source"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          dimensionId:   dim.id,
+          dimensionName: dim.name,
+          asset:         assetKey,
+          assetLabel,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setResult(data as LocateResult);
+      } else {
+        setError(data.error ?? "Location failed");
+      }
+    } catch {
+      setError("Network error — retry");
+    } finally {
+      setLocating(false);
+    }
+  };
+
+  if (!result) {
+    return (
+      <div className="mx-3 mb-2 rounded border border-rose-500/20 bg-rose-500/[0.04] p-3 space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="text-[8px] font-mono text-rose-400/70 uppercase tracking-wider">Authority Gap · State 3</div>
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[7.5px] font-mono font-bold tracking-wider text-rose-400 bg-rose-500/8 border-rose-500/20">
+            <span className="w-1 h-1 rounded-full bg-rose-500" />
+            NO FEED
+          </span>
+        </div>
+        <div className="text-[8px] font-mono text-[#6B7280] leading-relaxed">
+          No observation feed wired for <span className="text-[#AAB4C2]">{dim.name}</span>.
+          Authority unknown — requires source discovery.
+        </div>
+        {error && <div className="text-[7.5px] font-mono text-rose-400">{error}</div>}
+        <button
+          onClick={handleLocate}
+          disabled={locating}
+          className="flex items-center gap-1.5 text-[8px] font-mono text-[#E0AF68] hover:text-[#F0BF78] disabled:opacity-50 cursor-pointer transition-colors"
+        >
+          {locating ? (
+            <>
+              <span className="w-1.5 h-1.5 rounded-full bg-[#E0AF68] animate-pulse shrink-0" />
+              LOCATING SOURCE…
+            </>
+          ) : (
+            <>
+              <span className="text-[10px] leading-none">→</span>
+              LOCATE SOURCE
+            </>
+          )}
+        </button>
+      </div>
+    );
+  }
+
+  const isState2     = result.usesRegisteredAuthority;
+  const borderColor  = isState2 ? "border-amber-400/20"    : "border-[#E0AF68]/15";
+  const bgColor      = isState2 ? "bg-amber-400/[0.04]"    : "bg-[#E0AF68]/[0.03]";
+  const headerColor  = isState2 ? "text-amber-400/80"      : "text-[#E0AF68]/70";
+  const stateLabel   = isState2 ? "State 2 · Authority Known — Feed Not Wired" : "State 3 → Source Located";
+
+  return (
+    <div className={`mx-3 mb-2 rounded border ${borderColor} ${bgColor} p-3 space-y-2.5`}>
+      <div className="flex items-center justify-between">
+        <div className={`text-[8px] font-mono ${headerColor} uppercase tracking-wider`}>{stateLabel}</div>
+        <span className={`text-[7.5px] font-mono font-bold tracking-wider ${CONFIDENCE_COLOR[result.confidence] ?? "text-[#AAB4C2]"}`}>
+          {result.confidence.toUpperCase()} CONFIDENCE
+        </span>
+      </div>
+
+      <div>
+        <div className="text-[7.5px] font-mono text-[#6B7280] uppercase tracking-wider mb-0.5">Authority</div>
+        <a
+          href={result.authorityUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="text-[9px] font-mono text-[#64D2FF] hover:underline leading-tight block"
+        >
+          {result.authorityName}
+        </a>
+      </div>
+
+      <div>
+        <div className="text-[7.5px] font-mono text-[#6B7280] uppercase tracking-wider mb-0.5">Endpoint</div>
+        <div className="text-[8px] font-mono text-[#AAB4C2] leading-relaxed">{result.endpointDescription}</div>
+        <div className="text-[7.5px] font-mono text-[#5A6575] break-all mt-0.5 leading-relaxed">{result.endpointUrl}</div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <div className="text-[7.5px] font-mono text-[#6B7280] uppercase tracking-wider mb-0.5">Refresh Cycle</div>
+          <div className="text-[8.5px] font-mono text-[#C8D0DB]">{result.refreshCycle}</div>
+        </div>
+        <div>
+          <div className="text-[7.5px] font-mono text-[#6B7280] uppercase tracking-wider mb-0.5">Auth Required</div>
+          <div className={`text-[8.5px] font-mono ${result.authRequired ? "text-rose-400" : "text-emerald-400"}`}>
+            {result.authRequired ? "YES" : "NO — PUBLIC"}
+          </div>
+        </div>
+      </div>
+
+      {result.notes && result.notes.toLowerCase() !== "none" && (
+        <div>
+          <div className="text-[7.5px] font-mono text-[#6B7280] uppercase tracking-wider mb-0.5">Notes</div>
+          <div className="text-[7.5px] font-mono text-[#8A9DB0] leading-relaxed">{result.notes}</div>
+        </div>
+      )}
+
+      {!isState2 && (
+        <div className="border-t border-[#E0AF68]/10 pt-2">
+          <div className="text-[7.5px] font-mono text-[#E0AF68]/50">
+            Authority not yet in registry — add via POST /api/authorities to wire observation feed
+          </div>
+        </div>
+      )}
+
+      <button
+        onClick={(e) => { e.stopPropagation(); setResult(null); setError(null); }}
+        className="text-[7px] font-mono text-[#4A5568] hover:text-[#6B7280] cursor-pointer transition-colors"
+      >
+        ↺ re-locate
+      </button>
+    </div>
+  );
 }
 
 const DIRECTION_COLOR: Record<string, string> = {
@@ -153,11 +324,15 @@ function DimensionRow({
   index,
   visible,
   feed,
+  assetKey,
+  assetLabel,
 }: {
   dim: DimensionEntry;
   index: number;
   visible: boolean;
   feed?: FeedRecord;
+  assetKey: string;
+  assetLabel: string;
 }) {
   const [expanded, setExpanded] = useState(false);
   const color    = DIRECTION_COLOR[dim.direction];
@@ -236,9 +411,7 @@ function DimensionRow({
                 transition={{ duration: 0.15 }}
                 className="overflow-hidden"
               >
-                <div className="mx-3 mb-2 px-3 py-2 rounded border border-white/[0.04] bg-white/[0.02]">
-                  <div className="text-[8px] font-mono text-[#6B7280]">No authority feed for <span className="text-[#AAB4C2]">{dim.id}</span></div>
-                </div>
+                <AuthorityGapPanel dim={dim} assetKey={assetKey} assetLabel={assetLabel} />
               </motion.div>
             )}
           </AnimatePresence>
@@ -306,7 +479,7 @@ function FeedsLegend({ feeds }: { feeds: FeedRecord[] }) {
   );
 }
 
-export default function DimensionStack({ dimensions, loading, rapidsCompression, feeds = [] }: DimensionStackProps) {
+export default function DimensionStack({ dimensions, loading, rapidsCompression, feeds = [], assetKey = "BTC", assetLabel = "Bitcoin" }: DimensionStackProps) {
   const [expandLevel, setExpandLevel] = useState<ExpandLevel>(10);
 
   const feedMap = new Map<string, FeedRecord>(feeds.map((f) => [f.id, f]));
@@ -365,6 +538,8 @@ export default function DimensionStack({ dimensions, loading, rapidsCompression,
                     index={i}
                     visible={true}
                     feed={feedMap.get(dim.id)}
+                    assetKey={assetKey}
+                    assetLabel={assetLabel}
                   />
                 ))}
                 {expandLevel > 10 && Array.from({ length: extraCount }).map((_, i) => (
