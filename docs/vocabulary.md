@@ -107,6 +107,9 @@ The dimensional separation function. The mechanism by which RAPIDS splits a sing
 **RAPIDS**
 The structural resolution layer. Resolves statistical structure, correlations, topology, and pattern geometry before interpretation begins. Does not reason — resolves. Third layer of the AUGMENT phase.
 
+**REPRESENTATIONAL DRIFT**
+The downstream divergence that occurs when code architecture, documentation, and operational display lose synchronization with each other. The primary risk as the body of knowledge grows. Prevented by treating `docs/vocabulary.md` as the authoritative source of truth — when documents conflict with vocabulary, vocabulary is correct.
+
 **SIGNAL**
 Raw input from the environment before domain classification or structure resolution. A signal has no fixed meaning until intent is established.
 
