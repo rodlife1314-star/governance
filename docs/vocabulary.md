@@ -128,8 +128,17 @@ The revealed geometry — what becomes visible to the operator after RAPIDS has 
 **STRUCTURE**
 Verified relationships present in evidence. Structure precedes interpretation. Structure is resolved by RAPIDS, not inferred.
 
+**THE COMPASS**
+Doctrine and Operator Sovereignty as a unified orientation instrument. Immutable. Decides how and why the operator navigates. The compass does not change when the technology changes. See: THE TELESCOPE.
+
+**THE TELESCOPE**
+Technology instruments (RAPIDS structural resolution, SIMON interpretation, Gemini grounding queries, NVIDIA RAPIDS VRAM data streams, physical code pipelines) operating collectively as a magnifier. Extends the operator's visual limits into deep reality structures without replacing the operator's sight or authority. The telescope does not point itself — the compass determines direction. See: THE COMPASS.
+
 **THE TREE**
 The AI Studio experimental clone of Pathfinder. Downstream from the governance repository. Not doctrine. Not canonical. A laboratory for the Delta layer.
+
+**VISUALIZED INSTRUMENT WORKSPACE**
+The target spatial geometry of the operator environment. Human cognitive limits — bandwidth, attention, memory — are not delegated to background automation but rendered as physical layout distances and angles rotating about the operator. Grounded facts orbit tightly inward. Unverified assumptions drift outward. The operator navigates by position within the field, not by reading a display.
 
 **VOCABULARY**
 This document. The single source of truth for term definitions across this repository. When other documents conflict with this file, this file is correct.
