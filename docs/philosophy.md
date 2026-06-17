@@ -172,5 +172,93 @@ The correction is always the same: return to the observer at the centre, and reb
 
 ---
 
+---
+
+## THE ORDER
+
+This is perhaps the most dangerous question the architecture must answer:
+
+**What happens when technology is added to the doctrine?**
+
+The answer depends entirely on which sits underneath the other.
+
+```
+CORRECT ORDER:
+
+  Doctrine
+     ↓
+  Governance
+     ↓
+  Technology
+
+DANGEROUS ORDER:
+
+  Technology
+     ↓
+  Doctrine
+```
+
+When doctrine sits above technology, the doctrine decides how the power is used.
+
+When technology sits above doctrine, the technology starts deciding what the human sees.
+
+**Technology does not replace doctrine. Technology amplifies doctrine.**
+
+A bad doctrine with powerful technology becomes dangerous at scale.
+A good doctrine with powerful technology becomes transformative at scale.
+
+This is why the architecture was established before the acceleration layer. RAPIDS, NVIDIA cuDF, cuML, cuGraph — these are instruments. Instruments are only as trustworthy as the governance framework that directs them.
+
+The sequence from current state to target state:
+
+```
+Today:
+  Doctrine (established)
+  Governance (enforced by coverage gate, authority registry, OCTAGON)
+  Technology (Gemini for SIMON, PostgreSQL, deterministic routing)
+
+Target:
+  Doctrine (unchanged)
+  Governance (unchanged)
+  Technology (NVIDIA RAPIDS for structural resolution, Cloud Run, Firebase)
+```
+
+The doctrine does not change when the technology changes. That is the point.
+
+---
+
+## THE FUTURE SHAPE
+
+A hundred years forward, the cognitive flow might look like:
+
+```
+Reality
+  → Sensors
+  → Structure Resolution     (RAPIDS + successor instruments)
+  → Meaning Resolution       (SIMON + domain authorities)
+  → Challenge Resolution     (JEMMA + contradiction surfacing)
+  → Future Projection        (not yet defined)
+  → Operator Decision
+  → Action
+  → Learn                    (DELTA)
+```
+
+The operator does not disappear as technology advances.
+
+The space around the operator expands.
+
+Today humans are constrained by attention, memory, bandwidth, perception, and time. Most mistakes occur because we cannot see enough of reality at once.
+
+An augmentation system is not valuable because it thinks. It is valuable because it reveals what is already there — structure that exists but is not yet visible to the unaided observer.
+
+**The future version is not: Human versus AI.**
+
+**It is: Human + instrumentation versus ignorance.**
+
+The doctrine remains the compass.
+The technology becomes the telescope.
+
+---
+
 *Repo: `rodlife1314-star/governance`*
 *This document is the root. Everything else is downstream.*

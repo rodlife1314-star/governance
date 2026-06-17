@@ -97,13 +97,20 @@ Node 24 · TypeScript 5.9 · React + Vite · Express 5 · PostgreSQL + Drizzle O
 
 ## Documentation
 
-Recommended reading order:
+| Doc | Question it answers |
+|-----|-------------------|
+| [`docs/philosophy.md`](docs/philosophy.md) | Why does this exist? (spatial cognition + doctrine precedes technology) |
+| [`docs/architecture.md`](docs/architecture.md) | How does it work? (all 8 layers) |
+| [`docs/doctrine.md`](docs/doctrine.md) | What laws govern it? (8 foundational laws) |
+| [`docs/vocabulary.md`](docs/vocabulary.md) | What do the terms mean? (single source of truth) |
+| [`docs/rapids.md`](docs/rapids.md) | How is structure resolved? |
+| [`docs/simon.md`](docs/simon.md) | How is structure interpreted? |
+| [`docs/octagon.md`](docs/octagon.md) | How is authority enforced? |
+| [`docs/deployment.md`](docs/deployment.md) | How is it instantiated? |
+| [`docs/alice-handshake.md`](docs/alice-handshake.md) | Context for external AI co-pilots |
+| [`docs/jemma-handshake.md`](docs/jemma-handshake.md) | Context for The Tree experiment |
 
-1. [`docs/philosophy.md`](docs/philosophy.md) — why this exists (spatial cognition doctrine)
-2. [`docs/architecture.md`](docs/architecture.md) — how it works (layer by layer)
-3. [`docs/doctrine.md`](docs/doctrine.md) — governance laws
-4. [`docs/alice-handshake.md`](docs/alice-handshake.md) — context packet for AI co-pilots (external)
-5. [`docs/jemma-handshake.md`](docs/jemma-handshake.md) — context packet for The Tree (internal experiment)
+Recommended reading order for newcomers: philosophy → architecture → doctrine → vocabulary
 
 ---
 
