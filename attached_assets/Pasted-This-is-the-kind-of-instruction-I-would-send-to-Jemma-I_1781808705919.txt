@@ -1,0 +1,255 @@
+This is the kind of instruction I would send to Jemma. It clarifies the architectural intent rather than prescribing implementation details.
+
+Architectural Clarification: RAPIDS as a Recursive Lens Function
+
+Purpose
+
+This document clarifies the intended role of RAPIDS within the Pathfinder geometry.
+
+The current implementation treats RAPIDS primarily as a sequential stage between AETHER and HERMES.
+
+This is not the intended architecture.
+
+The objective is to evolve RAPIDS into a reusable cognitive function that exists inside every geometric shape, operating as a focusing mechanism rather than a standalone room.
+
+⸻
+
+Core Doctrine
+
+SIMON is not a stage.
+
+SIMON is a listening layer.
+
+Likewise:
+
+RAPIDS is not a stage.
+
+RAPIDS is a lens.
+
+RAPIDS is the mechanism that expands, scans, filters, prioritizes, and focuses candidate possibilities before commitment to the next operation.
+
+⸻
+
+Telescope Principle
+
+Current thinking:
+
+AETHER → RAPIDS → HERMES
+
+Revised thinking:
+
+AETHER contains an internal RAPIDS function.
+
+HERMES contains an internal RAPIDS function.
+
+JEMMA contains an internal RAPIDS function.
+
+OCTAGON contains an internal RAPIDS function.
+
+The geometry remains unchanged.
+
+The internal cognition becomes recursive.
+
+Example:
+
+Observatory = Hermes
+
+Telescope = Rapids
+
+Astronomer = Operator
+
+The telescope is not a separate building.
+
+The telescope exists inside the observatory.
+
+The same doctrine applies across the entire geometry.
+
+⸻
+
+Hermes Clarification
+
+Current Limitation
+
+Hermes retrieves only from previously known authorities.
+
+This creates a closed retrieval loop.
+
+The architecture cannot grow its authority graph.
+
+Required Behaviour
+
+Before retrieval occurs, Hermes should be capable of activating a RAPIDS discovery lens.
+
+The RAPIDS lens should:
+
+* Search for candidate authorities inside the active domain.
+* Discover previously unknown sources.
+* Rank authority quality.
+* Detect authority-chain relevance.
+* Flag authority-chain mismatches.
+* Return recommendations.
+
+Example:
+
+Domain:
+Small-Body Astrophysics
+
+Current authorities:
+
+* MPC
+* JPL SBDB
+* Active Asteroids methodology papers
+
+Hermes RAPIDS should additionally ask:
+
+“What other legitimate authorities exist inside this domain?”
+
+Potential outputs:
+
+* Observatory archives
+* Survey projects
+* Domain journals
+* Instrument repositories
+* Observation networks
+* Additional peer-reviewed authority chains
+
+The system should then ask:
+
+“RAPIDS has identified additional candidate authorities.
+
+Would you like to review and add them to the domain library?”
+
+This allows the authority registry to evolve through observation rather than manual construction.
+
+⸻
+
+Recursive Geometry Principle
+
+Every geometric shape should possess:
+
+1. Aperture
+    * What enters.
+2. RAPIDS Lens
+    * Expansion.
+    * Discovery.
+    * Filtering.
+    * Prioritization.
+3. Shape Function
+    * The specific work performed by the geometry.
+4. Packet Output
+    * Structured handoff to the next geometry.
+
+⸻
+
+Example Internal Geometries
+
+AETHER
+
+Purpose:
+Hold uncertainty.
+
+Internal RAPIDS Function:
+
+* Expand unknowns.
+* Discover hidden assumptions.
+* Identify missing variables.
+* Surface ambiguity clusters.
+
+Output:
+
+Requirement Packet.
+
+⸻
+
+HERMES
+
+Purpose:
+Retrieve evidence.
+
+Internal RAPIDS Function:
+
+* Discover authorities.
+* Discover repositories.
+* Discover datasets.
+* Discover observation records.
+* Rank candidates.
+
+Output:
+
+Evidence Packet.
+
+⸻
+
+JEMMA
+
+Purpose:
+Challenge evidence.
+
+Internal RAPIDS Function:
+
+* Search for contradictions.
+* Search for missing evidence.
+* Search for alternative explanations.
+* Search for authority mismatches.
+
+Output:
+
+Challenge Packet.
+
+⸻
+
+OCTAGON
+
+Purpose:
+Govern decisions.
+
+Internal RAPIDS Function:
+
+* Expand options.
+* Explore consequences.
+* Surface constraint collisions.
+* Discover overlooked pathways.
+
+Output:
+
+Decision Packet.
+
+⸻
+
+Seed Kernel Requirement
+
+The Seed Kernel must remain:
+
+Simple.
+Scalable.
+Recursive.
+
+If a structural law cannot repeat inside every geometric shape, it does not belong in the Seed Kernel.
+
+RAPIDS appears to satisfy the recursion requirement.
+
+SIMON already satisfies the recursion requirement.
+
+Therefore RAPIDS should evolve from:
+
+“Stage”
+
+to
+
+“Universal Lens Function.”
+
+⸻
+
+Requested Review
+
+JEMMA is asked to evaluate:
+
+1. Whether RAPIDS should be formally reclassified from stage to function.
+2. Whether recursive RAPIDS lenses simplify the architecture.
+3. Whether authority discovery should be embedded inside Hermes.
+4. Whether authority-registry growth should occur through operator-approved RAPIDS recommendations.
+5. Whether this improves alignment with the Seed Kernel doctrine of scalable geometric recursion.
+
+End of clarification.
+
+Rod, the key insight here is that SIMON became a field, not a room. RAPIDS is beginning to look like the same kind of thing. If that holds under JEMMA’s challenge process, then the geometry becomes much more fractal and much closer to a true seed kernel.

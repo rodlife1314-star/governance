@@ -1,3 +1,4 @@
+import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, ArrowRight, Shield, Database, AlertTriangle, CheckCircle2, Lock, XCircle, AlertCircle, Link2 } from "lucide-react";
 import { CoverageReport, AuthorityRecord, DataSourceRecord, AetherRequirementPacket, PacketDrivenAuthority } from "../augment-types";
@@ -27,8 +28,18 @@ function coverageColor(pct: number): string {
 
 // ── Packet-driven authority row (RAPIDS consumed AETHER's chain) ───────────
 
-function PacketAuthorityRow({ auth, index }: { auth: PacketDrivenAuthority; index: number }) {
+interface PacketAuthorityRowProps {
+  auth: PacketDrivenAuthority;
+  index: number;
+  isAdded: boolean;
+  isAdding: boolean;
+  onAdd: () => void;
+}
+
+function PacketAuthorityRow({ auth, index, isAdded, isAdding, onAdd }: PacketAuthorityRowProps) {
   const dot = TIER_DOT[auth.tier] ?? "#8A9DB0";
+  const registered = auth.inRegistry || isAdded;
+
   return (
     <motion.div
       initial={{ opacity: 0, x: -4 }}
@@ -37,7 +48,7 @@ function PacketAuthorityRow({ auth, index }: { auth: PacketDrivenAuthority; inde
       className="flex items-start gap-2.5 py-2 border-b border-white/[0.03] last:border-0"
     >
       <div className="shrink-0 mt-0.5">
-        {auth.inRegistry
+        {registered
           ? <CheckCircle2 className="w-3 h-3 text-[#4CD964]" />
           : <AlertCircle   className="w-3 h-3 text-[#E0AF68]/50" />
         }
@@ -55,9 +66,29 @@ function PacketAuthorityRow({ auth, index }: { auth: PacketDrivenAuthority; inde
               <Link2 className="w-2.5 h-2.5" />
             </a>
           )}
-          <span className={`text-[7px] font-mono ml-auto shrink-0 ${auth.inRegistry ? "text-[#4CD964]/60" : "text-[#E0AF68]/50"}`}>
-            {auth.inRegistry ? "IN REGISTRY" : "NOT REGISTERED"}
-          </span>
+          {registered ? (
+            <span className={`text-[7px] font-mono ml-auto shrink-0 ${isAdded && !auth.inRegistry ? "text-[#4CD964]" : "text-[#4CD964]/60"}`}>
+              {isAdded && !auth.inRegistry ? "ADDED TO REGISTRY" : "IN REGISTRY"}
+            </span>
+          ) : isAdding ? (
+            <motion.span
+              className="text-[7px] font-mono text-[#5E8FFF]/60 ml-auto shrink-0"
+              animate={{ opacity: [0.4, 1, 0.4] }}
+              transition={{ duration: 1, repeat: Infinity }}
+            >
+              ADDING…
+            </motion.span>
+          ) : (
+            <div className="flex items-center gap-1.5 ml-auto shrink-0">
+              <span className="text-[7px] font-mono text-[#E0AF68]/50">NOT REGISTERED</span>
+              <button
+                onClick={onAdd}
+                className="text-[7px] font-mono text-[#5E8FFF]/60 hover:text-[#5E8FFF] border border-[#5E8FFF]/20 hover:border-[#5E8FFF]/40 px-1.5 py-0.5 rounded transition-all cursor-pointer"
+              >
+                + ADD
+              </button>
+            </div>
+          )}
         </div>
         <div className="text-[8px] font-mono text-[#4A5568] leading-relaxed">{auth.aetherReason}</div>
       </div>
@@ -154,6 +185,36 @@ export default function CoverageGate({
 }: CoverageGateProps) {
   const packetAuthorities = report?.packetDrivenAuthorities;
   const isPacketDriven    = !!packetAuthorities;
+
+  // ── Registry growth state: tracks operator-approved RAPIDS discoveries ──
+  const [addedToRegistry, setAddedToRegistry] = useState<Set<string>>(new Set());
+  const [addingToRegistry, setAddingToRegistry] = useState<Set<string>>(new Set());
+
+  const handleAddToRegistry = useCallback(async (auth: PacketDrivenAuthority) => {
+    if (!report) return;
+    const key = auth.shortName.toLowerCase();
+    setAddingToRegistry(prev => new Set([...prev, key]));
+    try {
+      const r = await fetch("/api/authorities", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          domain:      report.domain,
+          name:        auth.name,
+          shortName:   auth.shortName,
+          url:         auth.url,
+          tier:        auth.tier,
+          sourceType:  auth.tier,
+          description: auth.aetherReason,
+          jurisdiction: "International",
+          sortOrder:   99,
+        }),
+      });
+      if (r.ok) setAddedToRegistry(prev => new Set([...prev, key]));
+    } finally {
+      setAddingToRegistry(prev => { const s = new Set(prev); s.delete(key); return s; });
+    }
+  }, [report]);
 
   const allLegacyAuthorities: AuthorityRecord[] = report && !isPacketDriven
     ? [
@@ -334,7 +395,14 @@ export default function CoverageGate({
                 ) : (
                   <div>
                     {packetAuthorities.map((a, i) => (
-                      <PacketAuthorityRow key={a.shortName} auth={a} index={i} />
+                      <PacketAuthorityRow
+                        key={a.shortName}
+                        auth={a}
+                        index={i}
+                        isAdded={addedToRegistry.has(a.shortName.toLowerCase())}
+                        isAdding={addingToRegistry.has(a.shortName.toLowerCase())}
+                        onAdd={() => handleAddToRegistry(a)}
+                      />
                     ))}
                   </div>
                 )}
