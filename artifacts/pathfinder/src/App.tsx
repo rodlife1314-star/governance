@@ -565,11 +565,20 @@ export default function App() {
                 >
                   <AnimatePresence mode="wait">
                     {selectedDomain !== "FINANCE" ? (
-                      <DomainStandby key={selectedDomain} domain={getDomain(selectedDomain)} onObserve={() => {
-                        hintedDomainApiRef.current = DOMAIN_API_MAP[selectedDomain];
-                        setHintedDomainId(selectedDomain);
-                        setAppState("aperture");
-                      }} />
+                      <DomainStandby
+                        key={selectedDomain}
+                        domain={getDomain(selectedDomain)}
+                        observeLabel={selectedDomain === "ASTROPHYSICS" ? "ENTER SPECTRA-7 →" : undefined}
+                        onObserve={() => {
+                          if (selectedDomain === "ASTROPHYSICS") {
+                            setAppState("spectra");
+                          } else {
+                            hintedDomainApiRef.current = DOMAIN_API_MAP[selectedDomain];
+                            setHintedDomainId(selectedDomain);
+                            setAppState("aperture");
+                          }
+                        }}
+                      />
                     ) : (
                       <motion.div
                         key="finance"

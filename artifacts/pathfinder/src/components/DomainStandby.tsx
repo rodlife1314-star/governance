@@ -5,9 +5,10 @@ import { DomainConfig } from "../domains";
 interface DomainStandbyProps {
   domain: DomainConfig;
   onObserve?: () => void;
+  observeLabel?: string;
 }
 
-export default function DomainStandby({ domain, onObserve }: DomainStandbyProps) {
+export default function DomainStandby({ domain, onObserve, observeLabel }: DomainStandbyProps) {
   return (
     <motion.div
       key={domain.id}
@@ -101,7 +102,7 @@ export default function DomainStandby({ domain, onObserve }: DomainStandbyProps)
               (e.currentTarget as HTMLButtonElement).style.borderColor = `${domain.accentColor}40`;
             }}
           >
-            ENTER OBSERVATION →
+            {observeLabel ?? "ENTER OBSERVATION →"}
           </button>
         )}
 

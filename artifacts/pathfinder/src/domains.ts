@@ -56,10 +56,10 @@ export const DOMAINS: DomainConfig[] = [
     id: "ASTROPHYSICS",
     label: "Astrophysics",
     shortLabel: "ASTRO",
-    live: false,
-    color: "#64D2FF",
+    live: true,
+    color: "#5E8FFF",
     accentColor: "#5E8FFF",
-    tagline: "Stellar analysis · Spectral data · Orbital mechanics",
+    tagline: "Observational · Theoretical · Laboratory · Stellar evolution · Cosmology · Exoplanetary · Routes via SPECTRA-7",
     lensNames: ["Photometric", "Spectral", "Orbital", "Temporal", "Energetic", "Spatial", "Cosmological", "Instrument Cal.", "Catalog", "Prediction"],
   },
 ];
