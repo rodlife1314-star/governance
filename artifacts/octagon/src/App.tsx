@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import { Layout } from "@/components/layout";
+import Portal from "@/pages/portal";
 import Dashboard from "@/pages/dashboard";
 import Memory from "@/pages/memory";
 import Doctrine from "@/pages/doctrine";
@@ -16,18 +17,26 @@ const queryClient = new QueryClient();
 
 function Router() {
   return (
-    <Layout>
-      <Switch>
-        <Route path="/" component={Dashboard} />
-        <Route path="/memory" component={Memory} />
-        <Route path="/doctrine" component={Doctrine} />
-        <Route path="/workflows" component={Workflows} />
-        <Route path="/workflows/:id" component={WorkflowDetail} />
-        <Route path="/routing" component={Routing} />
-        <Route path="/scenarios" component={Scenarios} />
-        <Route component={NotFound} />
-      </Switch>
-    </Layout>
+    <Switch>
+      {/* Root — soul-level portal, no sidebar */}
+      <Route path="/" component={Portal} />
+
+      {/* All other routes — wrapped in the OCTAGON system layout */}
+      <Route>
+        <Layout>
+          <Switch>
+            <Route path="/dashboard" component={Dashboard} />
+            <Route path="/memory" component={Memory} />
+            <Route path="/doctrine" component={Doctrine} />
+            <Route path="/workflows" component={Workflows} />
+            <Route path="/workflows/:id" component={WorkflowDetail} />
+            <Route path="/routing" component={Routing} />
+            <Route path="/scenarios" component={Scenarios} />
+            <Route component={NotFound} />
+          </Switch>
+        </Layout>
+      </Route>
+    </Switch>
   );
 }
 

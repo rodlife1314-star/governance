@@ -16,6 +16,7 @@ import ObservationAperture from "./components/ObservationAperture";
 import CoverageGate from "./components/CoverageGate";
 import ObservationResult from "./components/ObservationResult";
 import AetherGate from "./components/AetherGate";
+import SpectraView from "./components/SpectraView";
 
 type Mode = "augment" | "archive" | "action";
 type AugmentTab = "field" | "dims" | "intel";
@@ -44,7 +45,7 @@ const DOMAIN_API_MAP: Record<DomainId, string> = {
   ASTROPHYSICS: "Astrophysics",
 };
 
-type AppState = "aperture" | "aether" | "coverage" | "result" | "field";
+type AppState = "aperture" | "aether" | "coverage" | "result" | "field" | "spectra";
 
 export default function App() {
   // ── Top-level app state ────────────────────────────────────────────────────
@@ -410,7 +411,50 @@ export default function App() {
 
   return (
     <div className="h-screen flex flex-col bg-[#07080B] text-white overflow-hidden" id="pathfinder-augment">
-      <AnimatePresence mode="wait">
+
+      {/* ── SPECTRA-7: Routed specialty — same Doctrine, same Ledger ────────── */}
+      {appState === "spectra" && (
+        <div className="flex-1 overflow-y-auto">
+          <SpectraView onBack={() => setAppState("aperture")} />
+        </div>
+      )}
+
+      {/* ── SPECTRA-7 entry point — visible on aperture screen ───────────────── */}
+      {appState === "aperture" && (
+        <button
+          onClick={() => setAppState("spectra")}
+          style={{
+            position: "fixed",
+            top: "16px",
+            right: "16px",
+            zIndex: 50,
+            background: "rgba(232, 64, 90, 0.06)",
+            border: "1px solid rgba(232, 64, 90, 0.25)",
+            borderRadius: "4px",
+            color: "rgba(232, 64, 90, 0.7)",
+            fontFamily: "'Space Mono', monospace",
+            fontSize: "9px",
+            letterSpacing: "0.18em",
+            padding: "7px 12px",
+            cursor: "pointer",
+            transition: "all 0.2s ease",
+          }}
+          onMouseEnter={e => {
+            (e.currentTarget as HTMLButtonElement).style.background = "rgba(232, 64, 90, 0.12)";
+            (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(232, 64, 90, 0.5)";
+            (e.currentTarget as HTMLButtonElement).style.color = "#e8405a";
+          }}
+          onMouseLeave={e => {
+            (e.currentTarget as HTMLButtonElement).style.background = "rgba(232, 64, 90, 0.06)";
+            (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(232, 64, 90, 0.25)";
+            (e.currentTarget as HTMLButtonElement).style.color = "rgba(232, 64, 90, 0.7)";
+          }}
+        >
+          SPECTRA-7 ↗
+        </button>
+      )}
+
+      {appState !== "spectra" && <AnimatePresence mode="wait">
 
         {/* ── LEVEL 0: Observation aperture ─────────────────────────────────── */}
         {appState === "aperture" && (
@@ -724,7 +768,8 @@ export default function App() {
           </motion.div>
         )}
 
-      </AnimatePresence>
+      </AnimatePresence>}
+
     </div>
   );
 }
