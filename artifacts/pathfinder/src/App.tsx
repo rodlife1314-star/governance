@@ -302,11 +302,19 @@ export default function App() {
 
     // TS cannot track that capturedPacket was assigned inside the async .then() callback,
     // so it keeps the init type (null). Double-assert to access the runtime-assigned value.
-    const rapidsBody: Record<string, unknown> = { ...baseBody };
     const pkt = capturedPacket as unknown as AetherRequirementPacket | null;
+
+    // Context Custody Law: after AETHER resolves, its packet owns the domain.
+    // Never substitute UI session context (hintedDomainApiRef) for packet context.
+    // If no packet (AETHER degraded), fall back to the UI hint.
+    const rapidsBody: Record<string, unknown> = { observation: text };
     if (pkt !== null) {
+      rapidsBody["domain"]                   = pkt.domain;
+      rapidsBody["subDomain"]                = pkt.subDomain;
       rapidsBody["aetherAuthorityChain"]     = pkt.authorityChain;
       rapidsBody["aetherBlockedAuthorities"] = pkt.blockedAuthorities;
+    } else if (hintDomain) {
+      rapidsBody["domain"] = hintDomain;
     }
 
     // RAPIDS fires after AETHER, receiving the full authority chain + blocked list.
