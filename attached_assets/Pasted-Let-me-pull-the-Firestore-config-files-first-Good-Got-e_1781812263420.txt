@@ -1,0 +1,219 @@
+Let me pull the Firestore config files first.
+
+Good. Got everything I need. Here’s the full picture before writing the code:
+
+What the blueprint tells me: Two collections exist — sessions and substrate_deltas. There’s no dispatches collection defined yet. The Firestore rules use request.auth (client-side Firebase Auth), but server.ts uses the Admin SDK server-side — so the rules won’t apply to server writes. That’s correct behaviour; Admin SDK bypasses client rules by design.
+
+The plan: Add a dispatches collection, initialise Firebase Admin in server.ts, write every dispatch to Firestore on POST /api/dispatch, and read from Firestore on GET /api/dispatches. The in-memory array becomes a fast-path cache that seeds from Firestore on boot.
+
+Two files change: firebase-blueprint.json (add the collection schema) and server.ts (Admin init + Firestore writes/reads). You’ll also need one env var added: FIREBASE_PROJECT_ID. If you’re using a service account key file you’ll need GOOGLE_APPLICATION_CREDENTIALS too — I’ll show both paths.
+
+firebase-blueprint.json — add the dispatches collection:
+
+{
+  "version": "1.0.0",
+  "collections": {
+    "sessions": {
+      "fields": {
+        "userId": "string",
+        "inquiry": "string",
+        "evidenceDocs": "array",
+        "analysis": "map",
+        "selectedPathwayId": "string",
+        "dispatchedDirective": "string",
+        "operatorSignature": "string",
+        "updatedAt": "timestamp"
+      },
+      "indexes": []
+    },
+    "substrate_deltas": {
+      "fields": {
+        "userId": "string",
+        "timestamp": "timestamp",
+        "observation": "string",
+        "explanation": "string",
+        "reasoning": "string",
+        "learning": "string",
+        "internalizedRule": "string"
+      },
+      "indexes": []
+    },
+    "dispatches": {
+      "fields": {
+        "id": "string",
+        "timestamp": "timestamp",
+        "actionId": "string",
+        "operatorName": "string",
+        "signature": "string",
+        "checksum": "string",
+        "asset": "string",
+        "directive": "string",
+        "status": "string",
+        "origin": "string",
+        "engine": "string"
+      },
+      "indexes": [
+        { "fields": ["timestamp"], "order": "DESCENDING" }
+      ]
+    }
+  }
+}
+
+
+server.ts — the full diff. Three blocks change:
+
+Block 1 — imports & Firebase Admin init (replace the top of the file, after the existing imports):
+
+import express from "express";
+import path from "path";
+import { createServer as createViteServer } from "vite";
+import dotenv from "dotenv";
+import { GoogleGenAI, Type } from "@google/genai";
+import { initializeApp, getApps, cert } from "firebase-admin/app";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
+
+dotenv.config();
+
+// --- Firebase Admin initialisation ---
+// If GOOGLE_APPLICATION_CREDENTIALS env var points to a service account JSON,
+// cert() picks it up automatically. On Cloud Run with a bound service account,
+// use applicationDefault() instead.
+if (!getApps().length) {
+  if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+    // Key passed as JSON string in env (recommended for Cloud Run secrets)
+    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+    initializeApp({ credential: cert(serviceAccount) });
+  } else {
+    // Falls back to GOOGLE_APPLICATION_CREDENTIALS file path or ADC
+    const { applicationDefault } = await import("firebase-admin/app");
+    initializeApp({ credential: applicationDefault() });
+  }
+}
+
+const db = getFirestore();
+const DISPATCHES_COLLECTION = "dispatches";
+
+
+Note: the await import inside module scope requires "module": "ESNext" or top-level await. If your tsconfig.json targets CommonJS, replace it with require('firebase-admin/app').applicationDefault(). Check your tsconfig — it’s almost certainly ESNext given Vite.
+
+Block 2 — install the package (run this once):
+
+npm install firebase-admin
+
+
+Block 3 — replace the two dispatch routes in server.ts:
+
+// In-memory cache — seeded from Firestore on boot, kept in sync on writes
+const activeDispatches: any[] = [];
+
+// Seed cache from Firestore on startup (last 50 dispatches, newest first)
+async function seedDispatchCache() {
+  try {
+    const snapshot = await db
+      .collection(DISPATCHES_COLLECTION)
+      .orderBy("timestamp", "desc")
+      .limit(50)
+      .get();
+    snapshot.forEach(doc => activeDispatches.push(doc.data()));
+    console.log(`CRYSTAL BRIDGE: ${activeDispatches.length} dispatch records loaded from Firestore ledger.`);
+  } catch (err) {
+    console.warn("CRYSTAL BRIDGE: Firestore seed failed — operating on empty cache.", err);
+  }
+}
+
+// POST /api/dispatch — persist to Firestore, update cache
+app.post("/api/dispatch", async (req, res) => {
+  try {
+    const { actionId, operatorName, signature, checksum, asset, directive } = req.body;
+
+    if (!signature || !operatorName) {
+      return res.status(400).json({ error: "Operator signature and credential verification details required." });
+    }
+
+    const dispatchId = `DISPATCH-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+
+    const dispatchRecord = {
+      id: dispatchId,
+      timestamp: new Date().toISOString(),
+      actionId: actionId || "FIELD-POSTURE-01",
+      operatorName,
+      signature: signature.toUpperCase(),
+      checksum: checksum || null,
+      asset: asset || "BTC",
+      directive: directive || "Operational Posture Shift Approved",
+      status: "COMPLETED_DISPATCHED",
+      origin: "CRYSTAL_BRIDGE_GATEWAY",
+      engine: "NVIDIA DGX H100 EXECUTION UNIT"
+    };
+
+    // Write to Firestore — use the dispatchId as the document ID for idempotent lookup
+    await db
+      .collection(DISPATCHES_COLLECTION)
+      .doc(dispatchId)
+      .set({
+        ...dispatchRecord,
+        timestamp: FieldValue.serverTimestamp(), // use server timestamp in Firestore
+      });
+
+    // Keep cache in sync (prepend — newest first)
+    activeDispatches.unshift(dispatchRecord);
+
+    return res.json({
+      success: true,
+      record: dispatchRecord,
+      message: "Gateway: Crystal Bridge dispatch committed to sovereign ledger (Firestore) and execution flow initialized.",
+      ledger: "FIRESTORE_PERSISTED"
+    });
+  } catch (error: any) {
+    console.error("Dispatch API error:", error);
+    return res.status(500).json({ error: error.message || "Internal Bridge Gateway disruption." });
+  }
+});
+
+// GET /api/dispatches — serve from cache (seeded from Firestore on boot)
+app.get("/api/dispatches", (req, res) => {
+  return res.json({ dispatches: activeDispatches });
+});
+
+
+Block 4 — call seedDispatchCache() inside startServer() before app.listen:
+
+async function startServer() {
+  await seedDispatchCache(); // <-- add this line
+
+  if (process.env.NODE_ENV !== "production") {
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: "spa",
+    });
+    app.use(vite.middlewares);
+  } else {
+    const distPath = path.join(process.cwd(), "dist");
+    app.use(express.static(distPath));
+    app.get("*", (req, res) => {
+      res.sendFile(path.join(distPath, "index.html"));
+    });
+  }
+
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`DELTA cognitive server running on http://localhost:${PORT}`);
+  });
+}
+
+
+.env — add one variable:
+
+GEMINI_API_KEY=your_gemini_api_key_here
+
+# Option A — service account JSON as a string (recommended for Cloud Run secrets)
+FIREBASE_SERVICE_ACCOUNT_KEY={"type":"service_account","project_id":"..."}
+
+# Option B — path to key file (local dev)
+# GOOGLE_APPLICATION_CREDENTIALS=/path/to/serviceAccountKey.json
+
+
+Behaviour after this change:
+
+On boot, the server loads the last 50 dispatches from Firestore into the cache — so GET /api/dispatches is instant and doesn’t hit Firestore on every request. Every POST /api/dispatch writes atomically to Firestore first, then updates the cache. If the server crashes and restarts, the ledger is fully intact. The dispatch document ID matches the id field, so you can do idempotent lookups by ID later if needed.
+
+Want me to also add the dispatches collection to firestore.rules with the appropriate read/write lock for authenticated operators?

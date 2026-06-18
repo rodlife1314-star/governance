@@ -12,6 +12,7 @@ import dimensionsRouter from "./dimensions";
 import observeRouter from "./observe";
 import aetherRouter from "./aether";
 import authoritiesRouter from "./authorities";
+import spectraRouter from "./spectra";
 
 const router: IRouter = Router();
 
@@ -28,5 +29,6 @@ router.use(dimensionsRouter);
 router.use(observeRouter);
 router.use(aetherRouter);
 router.use(authoritiesRouter);
+router.use(spectraRouter);
 
 export default router;

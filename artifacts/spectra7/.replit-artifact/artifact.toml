@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/spectra7/"
+title = "SPECTRA-7"
+version = "1.0.0"
+id = "artifacts/spectra7"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/spectra7/" ]
+localPort = 19616
+
+[services.development]
+run = "pnpm --filter @workspace/spectra7 run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/spectra7", "run", "build" ]
+publicDir = "artifacts/spectra7/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19616"
+BASE_PATH = "/spectra7/"
