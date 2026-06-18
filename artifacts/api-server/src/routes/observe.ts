@@ -187,13 +187,24 @@ function detectDomain(text: string): { domain: string; confidence: number } {
 // ── Coverage check ─────────────────────────────────────────────────────────
 
 router.post("/observe/coverage", async (req, res) => {
-  const { observation, domain: domainOverride } = req.body as { observation?: string; domain?: string };
+  const {
+    observation,
+    domain: domainOverride,
+    aetherAuthorityChain,
+    aetherBlockedAuthorities,
+  } = req.body as {
+    observation?: string;
+    domain?: string;
+    aetherAuthorityChain?: Array<{ shortName: string; name: string; url: string; tier: string; reason: string }>;
+    aetherBlockedAuthorities?: Array<{ shortName: string; name: string; url: string; reason: string }>;
+  };
 
   if (!observation || typeof observation !== "string" || observation.trim().length === 0) {
     res.status(400).json({ success: false, error: "observation is required" });
     return;
   }
   const trimmed = observation.trim();
+  const hasPacket = Array.isArray(aetherAuthorityChain) && aetherAuthorityChain.length > 0;
 
   try {
     const detected = domainOverride
@@ -201,7 +212,7 @@ router.post("/observe/coverage", async (req, res) => {
       : detectDomain(trimmed);
     const { domain, confidence } = detected;
 
-    const [authRows, sourceRows] = await Promise.all([
+    const [allAuthRows, sourceRows] = await Promise.all([
       domain === "General"
         ? db.select().from(domainAuthorities)
             .where(eq(domainAuthorities.active, true))
@@ -219,14 +230,41 @@ router.post("/observe/coverage", async (req, res) => {
     const live  = sourceRows.filter(s => !s.authRequired);
     const gated = sourceRows.filter(s =>  s.authRequired);
     const coveragePct = sourceRows.length === 0 ? 0 : Math.round((live.length / sourceRows.length) * 100);
+    const byTier = (tier: string) => allAuthRows.filter(a => a.tier === tier);
 
-    const byTier = (tier: string) => authRows.filter(a => a.tier === tier);
+    // ── PACKET-DRIVEN mode: AETHER chain becomes RAPIDS search criteria ─────
+    let packetDrivenAuthorities: Array<{
+      shortName: string; name: string; url: string; tier: string;
+      aetherReason: string; inRegistry: boolean; registryId?: string;
+    }> | undefined;
+
+    if (hasPacket) {
+      // Registry lookup map by shortName (lowercase for fuzzy match)
+      const registryMap = new Map(allAuthRows.map(a => [a.shortName.toLowerCase(), a]));
+      const blockedSet  = new Set((aetherBlockedAuthorities ?? []).map(b => b.shortName.toLowerCase()));
+
+      packetDrivenAuthorities = (aetherAuthorityChain ?? [])
+        .filter(a => !blockedSet.has(a.shortName.toLowerCase()))
+        .map(a => {
+          const registered = registryMap.get(a.shortName.toLowerCase());
+          return {
+            shortName:   a.shortName,
+            name:        a.name,
+            url:         a.url,
+            tier:        a.tier,
+            aetherReason: a.reason,
+            inRegistry:  !!registered,
+            registryId:  registered?.id,
+          };
+        });
+    }
 
     res.json({
       success:    true,
       domain,
       domainFull: domain === "General" ? "General — awaiting classification" : domain,
       confidence,
+      packetDrivenAuthorities,
       authorities: {
         primary:    byTier("primary"),
         regulatory: byTier("regulatory"),

@@ -271,36 +271,54 @@ export default function App() {
     setAppState("aether");
 
     const hintDomain = hintedDomainApiRef.current;
-    const body = { observation: text, ...(hintDomain ? { domain: hintDomain } : {}) };
+    const baseBody = { observation: text, ...(hintDomain ? { domain: hintDomain } : {}) };
 
-    // Fire all three in parallel. AETHER and coverage resolve fast; analysis is slow.
+    // Capture packet locally so RAPIDS receives it the moment AETHER resolves.
+    // Cannot read from React state synchronously — use closure variable.
+    let capturedPacket: AetherRequirementPacket | null = null;
+
+    // AETHER and SIMON fire immediately in parallel.
     const aetherPromise = fetch(getAbsoluteUrl("/api/observe/aether"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      body: JSON.stringify(baseBody),
     }).then(r => r.json()).then(d => {
-      if (d?.success) setAetherPacket(d as AetherRequirementPacket);
-    }).catch(() => {});
-
-    const coveragePromise = fetch(getAbsoluteUrl("/api/observe/coverage"), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    }).then(r => r.json()).then(d => {
-      if (d?.success) setCoverageReport(d as CoverageReport);
+      if (d?.success) {
+        capturedPacket = d as AetherRequirementPacket;
+        setAetherPacket(d as AetherRequirementPacket);
+      }
     }).catch(() => {});
 
     const analysisPromise = fetch(getAbsoluteUrl("/api/observe"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      body: JSON.stringify(baseBody),
     }).then(r => r.json()).then(d => {
       if (d?.success) { setObservationAnalysis(d as ObservationAnalysis); setAnalysisReady(true); }
     }).catch(() => {});
 
-    // AETHER drives the gate sequence — wait for it, coverage + analysis run to completion.
+    // Wait for AETHER — then hand its requirement packet directly to RAPIDS.
     await aetherPromise;
-    void coveragePromise;
+
+    // TS cannot track that capturedPacket was assigned inside the async .then() callback,
+    // so it keeps the init type (null). Double-assert to access the runtime-assigned value.
+    const rapidsBody: Record<string, unknown> = { ...baseBody };
+    const pkt = capturedPacket as unknown as AetherRequirementPacket | null;
+    if (pkt !== null) {
+      rapidsBody["aetherAuthorityChain"]     = pkt.authorityChain;
+      rapidsBody["aetherBlockedAuthorities"] = pkt.blockedAuthorities;
+    }
+
+    // RAPIDS fires after AETHER, receiving the full authority chain + blocked list.
+    // This is the data-handoff: AETHER requirement → RAPIDS search filter.
+    void fetch(getAbsoluteUrl("/api/observe/coverage"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(rapidsBody),
+    }).then(r => r.json()).then(d => {
+      if (d?.success) setCoverageReport(d as CoverageReport);
+    }).catch(() => {});
+
     void analysisPromise;
   }, []);
 

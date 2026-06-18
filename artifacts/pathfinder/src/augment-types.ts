@@ -76,6 +76,16 @@ export interface AetherRequirementPacket {
 
 // ── Coverage gate types ────────────────────────────────────────────────────
 
+export interface PacketDrivenAuthority {
+  shortName: string;
+  name: string;
+  url: string;
+  tier: string;
+  aetherReason: string;
+  inRegistry: boolean;
+  registryId?: string;
+}
+
 export interface AuthorityRecord {
   id: string;
   domain: string;
@@ -106,6 +116,7 @@ export interface CoverageReport {
   domain: string;
   domainFull: string;
   confidence: number;
+  packetDrivenAuthorities?: PacketDrivenAuthority[];
   authorities: {
     primary:    AuthorityRecord[];
     regulatory: AuthorityRecord[];
