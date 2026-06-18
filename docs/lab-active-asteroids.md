@@ -80,15 +80,28 @@ The claim is specific and falsifiable: recurrent, perihelion-linked activity fro
 
 ### Q3 — What authorities matter?
 
-| Authority | Role | Status |
-|---|---|---|
-| **MPC (Minor Planet Center)** | Orbital elements, TJ classification | ✅ TJ=3.192 (>3 = dynamically asteroidal). q=2.37 AU. |
-| **JPL Small-Body Database** | Physical properties, albedo, diameter | ✅ Albedo=0.054, diameter ~3.7 km, C-type |
-| **Hsieh et al. 2021 / Chandler et al. 2021** | Primary peer-reviewed authority on activity | ✅ Physical characterisation + recurrence confirmation |
-| **SDSS Archival Imaging** | Background contamination check at exact RA/Dec | ⚠️ Check not yet performed — open action item |
-| **SIMBAD/VizieR** | General stellar/extragalactic database | ❌ **Does not index solar system bodies** — querying returns no result, not a negative result. Authority routing must skip SIMBAD entirely. Absence ≠ inactivity. |
+**The authority chain for solar system objects is domain-specific and does not overlap with the deep-sky chain.**
 
-**Critical routing note:** The simulated lab exercise suggested "use SIMBAD as authority check." Pathfinder correctly refused — SIMBAD's scope excludes solar system objects. This is not a gap in the data; it is a gap in the authority model that must be flagged explicitly.
+#### Correct authority chain — Solar System
+
+| Authority | Layer | Role | Status |
+|---|---|---|---|
+| **IAU Minor Planet Center (MPC)** | Source of truth | Original observational record. All asteroid/comet data submitted here first. Every orbit starts here. | ✅ TJ=3.192 confirmed. q=2.37 AU. |
+| **JPL Small-Body Database (SBDB)** | Derived / computed | JPL orbit computations are based on the most up-to-date MPC observations. Outputs: orbital elements, close-approach data, radar astrometry, discovery circumstances. Updated daily. | ✅ Albedo=0.054, diameter ~3.7 km, C-type. |
+| **Tisserand Parameter (T_J)** | Formal classification rule | Not a catalog — a mathematical criterion. T_J > 3 = dynamically asteroidal. T_J < 3 = cometary. This is what Pathfinder should cite when making the classification claim, not visual intuition alone. | ✅ T_J = 3.192 → dynamically asteroidal orbit confirmed. |
+| **Active Asteroids papers (Chandler et al.)** | Methodology authority | Defines what counts as a confirmed detection vs. candidate in this classification system. | ✅ Recurrence at two perihelions confirmed as MBC signal. |
+
+#### Wrong authority chain — do not route here
+
+| Authority | Why it fails |
+|---|---|
+| **SIMBAD/VizieR** | Deep-sky catalog built for stars and galaxies — objects that do not move. Returns no result for solar system bodies. |
+| **SDSS SkyServer** | Photometric survey of fixed sky positions. Cannot track a moving object across epochs. |
+| **NED (NASA/IPAC Extragalactic Database)** | Extragalactic objects only. |
+
+**The critical principle:** Silence from a wrong-domain authority is not negative evidence. It is a routing error. When a query returns no result, Pathfinder must determine whether (A) the object does not exist in that catalog's domain, or (B) the catalog does not cover this object class. These are not the same condition. Reporting (B) as (A) is a classification failure.
+
+The simulated lab exercise attached by Rod suggested "use SIMBAD as authority check." Pathfinder correctly refused — and the refusal is the signal. Not the absence of a SIMBAD result.
 
 ### Q4 — What data supports it?
 

@@ -29,6 +29,9 @@ A registered governing body for a domain. Required for any valid route through t
 **AUTHORITY PAIR**
 A domain combined with its governing authority. The minimum valid unit for any finding or route. Example: Finance + CME.
 
+**AUTHORITY MISROUTING**
+Querying an authority that does not cover the object class in question. Produces silence that could be mistaken for negative evidence. Must be diagnosed and reported before any finding is issued. Example: querying SIMBAD for a solar system object — the null result is a routing error, not evidence of absence.
+
 **AUTHORITY REGISTRY**
 The database of registered governing bodies and data sources per domain. The source of truth for coverage checks.
 
@@ -64,6 +67,9 @@ The laws that govern the system. Not guidelines. Not best practices. Constraints
 
 **DOMAIN**
 A distinct knowledge territory governed by specific authorities. Current domains: Finance, Medicine, Law, IT / Applied Sciences, Astrophysics.
+
+**DOMAIN-SPECIFIC AUTHORITY CHAIN**
+The principle that each knowledge domain maintains its own sovereign authority hierarchy, which does not overlap with other domains' chains. Routing to the wrong chain produces AUTHORITY MISROUTING. Example: solar system objects route to IAU MPC → JPL SBDB, not to SIMBAD or SDSS. Authority selection is a harder problem than evidence weighing — selecting the wrong chain invalidates all downstream analysis regardless of evidence quality.
 
 **EVIDENCE**
 An observation traceable to a registered source in the authority registry. Evidence without provenance is a claim.
@@ -136,6 +142,9 @@ Technology instruments (RAPIDS structural resolution, SIMON interpretation, Gemi
 
 **THE TREE**
 The AI Studio experimental clone of Pathfinder. Downstream from the governance repository. Not doctrine. Not canonical. A laboratory for the Delta layer.
+
+**TISSERAND PARAMETER (T_J)**
+The formal mathematical criterion for classifying solar system objects as dynamically asteroidal or cometary. T_J > 3: dynamically asteroidal orbit. T_J < 3: cometary orbit. Not a catalog, not a visual judgment — a computed threshold derived from orbital elements relative to Jupiter. Pathfinder must cite T_J when classifying an active small body, not image intuition. Example: (248370) 2005 QN173 has T_J = 3.192, confirming dynamically asteroidal orbit despite comet-like appearance.
 
 **VISUALIZED INSTRUMENT WORKSPACE**
 The target spatial geometry of the operator environment. Human cognitive limits — bandwidth, attention, memory — are not delegated to background automation but rendered as physical layout distances and angles rotating about the operator. Grounded facts orbit tightly inward. Unverified assumptions drift outward. The operator navigates by position within the field, not by reading a display.
