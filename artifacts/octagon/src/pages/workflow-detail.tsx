@@ -8,12 +8,12 @@ export default function WorkflowDetail() {
   
   const { data: wf, isLoading } = useGetWorkflow(id, { query: { enabled: !!id, queryKey: getGetWorkflowQueryKey(id) } });
 
-  if (isLoading) return <div className="p-8"><Skeleton className="h-64 w-full bg-muted rounded-none" /></div>;
-  if (!wf) return <div className="p-8 text-destructive">WORKFLOW NOT FOUND</div>;
+  if (isLoading) return <div className="p-4 md:p-8"><Skeleton className="h-64 w-full bg-muted rounded-none" /></div>;
+  if (!wf) return <div className="p-4 md:p-8 text-destructive">WORKFLOW NOT FOUND</div>;
 
   return (
-    <div className="p-8 space-y-6">
-      <div className="flex items-center gap-4 border-b border-border pb-4">
+    <div className="p-4 md:p-8 space-y-5 md:space-y-6">
+      <div className="flex items-center gap-3 flex-wrap border-b border-border pb-4">
         <Link href="/workflows" className="text-muted-foreground hover:text-primary">&lt; BACK</Link>
         <h1 className="text-2xl font-bold tracking-widest text-primary uppercase">{wf.name}</h1>
       </div>
@@ -30,15 +30,15 @@ export default function WorkflowDetail() {
         
         <div className="space-y-2">
           {wf.steps?.map((step, idx) => (
-            <div key={step.id} className="p-4 border border-border flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="text-muted-foreground w-6 text-right">{idx + 1}.</div>
-                <div>
-                  <div className="font-bold text-primary uppercase">{step.action}</div>
-                  {step.description && <div className="text-xs text-muted-foreground">{step.description}</div>}
+            <div key={step.id} className="p-4 border border-border flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
+              <div className="flex items-start gap-3 min-w-0">
+                <div className="text-muted-foreground w-5 shrink-0 text-right pt-0.5">{idx + 1}.</div>
+                <div className="min-w-0">
+                  <div className="font-bold text-primary uppercase break-words">{step.action}</div>
+                  {step.description && <div className="text-xs text-muted-foreground mt-0.5">{step.description}</div>}
                 </div>
               </div>
-              <div className="flex gap-2 text-xs">
+              <div className="flex gap-2 text-xs shrink-0 flex-wrap">
                 {step.executionMode && <div className="px-2 py-1 border border-border bg-black uppercase">{step.executionMode}</div>}
                 <div className={`px-2 py-1 border uppercase ${step.status === 'completed' ? 'border-primary text-primary' : 'border-border'}`}>
                   {step.status}

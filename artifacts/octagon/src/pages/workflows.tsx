@@ -7,7 +7,7 @@ export default function Workflows() {
   const { data: workflows, isLoading } = useListWorkflows({}, { query: { queryKey: getListWorkflowsQueryKey({}) } });
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-4 md:p-8 space-y-5 md:space-y-6">
       <div className="flex items-center justify-between border-b border-border pb-4">
         <h1 className="text-2xl font-bold tracking-widest text-primary">WORKFLOWS</h1>
       </div>

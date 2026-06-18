@@ -5,7 +5,7 @@ export default function Scenarios() {
   const { data: scenarios, isLoading } = useListScenarios({ query: { queryKey: getListScenariosQueryKey() } });
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-4 md:p-8 space-y-5 md:space-y-6">
       <div className="flex items-center justify-between border-b border-border pb-4">
         <h1 className="text-2xl font-bold tracking-widest text-primary">SCENARIOS</h1>
       </div>
@@ -18,9 +18,9 @@ export default function Scenarios() {
         ) : scenarios?.length ? (
           scenarios.map(scenario => (
             <div key={scenario.id} className="p-4 border border-border hover:border-primary transition-colors">
-              <div className="flex justify-between items-start mb-2">
-                <h3 className="text-lg font-bold text-primary uppercase">{scenario.name}</h3>
-                <div className={`px-2 py-1 border text-xs uppercase ${scenario.status === 'ready' || scenario.status === 'running' ? 'border-primary text-primary bg-primary/10' : 'border-border'}`}>
+              <div className="flex justify-between items-start mb-2 gap-2">
+                <h3 className="text-lg font-bold text-primary uppercase min-w-0 flex-1">{scenario.name}</h3>
+                <div className={`px-2 py-1 border text-xs uppercase shrink-0 ${scenario.status === 'ready' || scenario.status === 'running' ? 'border-primary text-primary bg-primary/10' : 'border-border'}`}>
                   {scenario.status}
                 </div>
               </div>

@@ -15,8 +15,8 @@ export default function Dashboard() {
   ].filter(d => d.value > 0) : [];
 
   return (
-    <div className="p-8 space-y-6">
-      <div className="flex items-center justify-between border-b border-border pb-4">
+    <div className="p-4 md:p-8 space-y-5 md:space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-3 border-b border-border pb-4">
         <h1 className="text-2xl font-bold tracking-widest text-primary">SYS_STATUS</h1>
         <div className="flex items-center gap-2">
           <div className={`w-3 h-3 rounded-none ${health?.status === 'ok' ? 'bg-primary animate-pulse' : 'bg-destructive'}`} />

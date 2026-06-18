@@ -5,7 +5,7 @@ export default function Routing() {
   const { data: decisions, isLoading } = useListRoutingDecisions({ query: { queryKey: getListRoutingDecisionsQueryKey() } });
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-4 md:p-8 space-y-5 md:space-y-6">
       <div className="flex items-center justify-between border-b border-border pb-4">
         <h1 className="text-2xl font-bold tracking-widest text-primary">ROUTING_LOGS</h1>
       </div>
@@ -25,7 +25,7 @@ export default function Routing() {
                 </div>
               </div>
               <div className="text-xs text-muted-foreground line-clamp-2">{decision.reasoning}</div>
-              <div className="flex gap-4 text-[10px] mt-2">
+              <div className="flex gap-3 flex-wrap text-[10px] mt-2">
                 <div>LOCAL_SCORE: {decision.localScore}</div>
                 <div>CLOUD_SCORE: {decision.cloudScore}</div>
                 {decision.latencyMs && <div>LATENCY: {decision.latencyMs}ms</div>}
