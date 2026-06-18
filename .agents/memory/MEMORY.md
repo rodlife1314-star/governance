@@ -1,6 +1,8 @@
 - [Reachable market data APIs from Replit](reachable-market-apis.md) — which public APIs work vs. are blocked (Binance/Bybit=blocked, OKX+Coinbase+CBOE+YF-with-Referer=working)
 - [Yahoo Finance symbol quirks](yahoo-finance-symbols.md) — forex pairs (XAUUSD=X, XAGUSD=X) unreliable; use CME futures (GC=F, SI=F) directly; volume is in contracts not USD — must multiply by CONTRACT_MULTIPLIERS.
 - [Pathfinder reality-first data contracts](pathfinder-reality-first.md) — LiveFeedData nullable fields + DataQuality; gemini.ts variable-declaration order; no Math.random anywhere; generateMockFeed removed.
+- [RAPIDS Python artifact setup](rapids-python-artifact.md) — createArtifact has no Python type; use full uvicorn path; omit waitForPort in configureWorkflow for Python services.
+- [cuGraph edge weight bounds](cugraph-edge-weight.md) — product-normalised similarity w=|vi×vj|/(|vi|+|vj|+ε) is unbounded above 1; never use le=1.0 on CorrelationEdge.weight.
 - [Pathfinder cognitive pipeline](pathfinder-cognitive-pipeline.md) — AETHER → RAPIDS → HERMES governed chain; shape = bounded function; each layer has one job enforced structurally.
 - [TypeScript let-closure narrowing](ts-let-closure-narrowing.md) — let-var assigned in .then() stays at init type after await; use `as unknown as T | null` to bypass.
 - [Context Custody Law](context-custody-law.md) — packet domain is authoritative after AETHER resolves; never spread stale UI ref (hintedDomainApiRef) into downstream bodies.

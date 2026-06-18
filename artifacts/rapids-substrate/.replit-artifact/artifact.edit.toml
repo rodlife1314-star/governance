@@ -1,0 +1,27 @@
+kind = "api"
+previewPath = "/rapids"
+title = "RAPIDS Substrate"
+version = "1.0.0"
+
+[[services]]
+localPort = 8082
+name = "RAPIDS Substrate"
+paths = ["/rapids"]
+
+[services.development]
+run = "cd artifacts/rapids-substrate && uvicorn main:app --host 0.0.0.0 --port 8082 --root-path /rapids --reload"
+
+[services.production]
+
+[services.production.build]
+args = ["true"]
+
+[services.production.run]
+args = ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8082", "--root-path", "/rapids"]
+workdir = "artifacts/rapids-substrate"
+
+[services.production.run.env]
+PORT = "8082"
+
+[services.production.health.startup]
+path = "/rapids/health"

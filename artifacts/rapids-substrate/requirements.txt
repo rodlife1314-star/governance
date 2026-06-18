@@ -1,0 +1,23 @@
+# RAPIDS Substrate — runtime dependencies
+# ─────────────────────────────────────────────────────────────────────────────
+# Core service
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+pydantic>=2.10.0
+
+# CPU fallback ML and graph libraries (always installed)
+numpy>=2.0.0
+scikit-learn>=1.5.0
+networkx>=3.4.0
+
+# ─────────────────────────────────────────────────────────────────────────────
+# GPU acceleration — OPTIONAL (install separately via conda rapidsai channel)
+# Requires CUDA 12.x and a compatible NVIDIA GPU.
+# If unavailable, all three engines fall back to the CPU path silently.
+#
+# conda install -c rapidsai -c conda-forge \
+#     cudf=25.04 cuml=25.04 cugraph=25.04 cupy-cuda12x python=3.12 cuda-version=12.0
+#
+# Or via pip (nightly, unsupported outside rapidsai channel):
+#   pip install cudf-cu12 cuml-cu12 cugraph-cu12 cupy-cuda12x
+# ─────────────────────────────────────────────────────────────────────────────

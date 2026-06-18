@@ -11,6 +11,26 @@ env = { "CI" = "true" }
 [workflows]
 runButton = "Project"
 
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "artifacts/rapids-substrate: RAPIDS Substrate"
+
+[[workflows.workflow]]
+name = "artifacts/rapids-substrate: RAPIDS Substrate"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd artifacts/rapids-substrate && /home/runner/workspace/.pythonlibs/bin/uvicorn main:app --host 0.0.0.0 --port 8000 --root-path /rapids"
+
 [agent]
 stack = "PNPM_WORKSPACE"
 expertMode = true
@@ -19,6 +39,10 @@ integrations = ["github:1.0.0"]
 [postMerge]
 path = "scripts/post-merge.sh"
 timeoutMs = 120000
+
+[[ports]]
+localPort = 8000
+externalPort = 8000
 
 [[ports]]
 localPort = 8080
@@ -50,3 +74,4 @@ externalPort = 3000
 
 [nix]
 channel = "stable-25_05"
+packages = ["glibcLocales", "libxcrypt"]
