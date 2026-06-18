@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { sovereignAudits, languageAuthorities } from "@workspace/db/schema";
 import { desc, eq } from "drizzle-orm";
 import { randomUUID } from "crypto";
+import { writeDispatch } from "../lib/firestore.js";
 
 const router = Router();
 
@@ -300,7 +301,7 @@ router.post("/sovereign/audits", async (req, res) => {
     const id = reqId || `AUDIT-${randomUUID().substring(0, 8).toUpperCase()}`;
     const createdAt = new Date().toISOString();
 
-    await db.insert(sovereignAudits).values({
+    const record = {
       id,
       authority: authority ?? "TradingView",
       asset: asset ?? "BTCUSD",
@@ -314,9 +315,16 @@ router.post("/sovereign/audits", async (req, res) => {
       operatorDecision: operatorDecision ?? "APPROVED",
       divergenceState: divergenceState ?? "ALIGNED",
       divergenceDelta: divergenceDelta ?? 0,
-    });
+    };
 
-    res.json({ success: true, id, createdAt });
+    // Primary write — Postgres via Drizzle
+    await db.insert(sovereignAudits).values(record);
+
+    // Secondary write — Firestore sovereign ledger (Crystal Bridge)
+    // Fire-and-forget: never blocks the response; Postgres is authoritative
+    const firestoreOk = await writeDispatch(record);
+
+    res.json({ success: true, id, createdAt, firestoreSync: firestoreOk });
   } catch (err: any) {
     req.log.error(err, "Failed to insert sovereign audit");
     res.status(500).json({ success: false, error: "Failed to record audit" });

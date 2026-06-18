@@ -158,3 +158,7 @@ overrides:
   # drizzle-kit uses esbuild internally on an older version that's vulnerable, this overrides it
   "@esbuild-kit/esm-loader": "npm:tsx@^4.21.0"
   esbuild: "0.27.3"
+  # firebase-admin pulls in @opentelemetry/api as a peer, causing pnpm to resolve a second
+  # copy of drizzle-orm with different peer types. Force a single @opentelemetry/api version
+  # so all drizzle-orm instances share the same resolved peer graph.
+  "@opentelemetry/api": "^1.9.0"
