@@ -23,15 +23,19 @@ async function callGemini(prompt: string): Promise<string> {
   return response.text ?? "";
 }
 
-function buildObservationPrompt(observation: string): string {
-  return `You are RAPIDS, a dimensional augmentation instrument. An operator has made a raw observation. Your role is to reveal what the operator cannot see without augmentation.
+function buildObservationPrompt(observation: string, domainHint?: string): string {
+  const domainAnchor = domainHint
+    ? `\nOPERATOR DOMAIN CLASSIFICATION: "${domainHint}"\nYou MUST anchor your dimensional analysis to this domain. Apply ${domainHint}-specific analytical lenses. Only override this classification if the observation text explicitly and unambiguously belongs to a completely different domain.\n`
+    : "";
 
+  return `You are RAPIDS, a dimensional augmentation instrument. An operator has made a raw observation. Your role is to reveal what the operator cannot see without augmentation.
+${domainAnchor}
 RAW OBSERVATION: "${observation}"
 
 Instructions:
-1. Read this observation without pre-classifying it
-2. Infer the domain and sub-domain from the content
-3. Discover 10 analytical dimensions that are genuinely relevant to THIS observation — not generic categories, but real analytical lenses that could reveal something new
+1. Read this observation carefully${domainHint ? ` — domain is operator-classified as ${domainHint}` : " without pre-classifying it"}
+2. ${domainHint ? `Use "${domainHint}" as the domain unless the text strongly contradicts it` : "Infer the domain and sub-domain from the content"}
+3. Discover 10 analytical dimensions genuinely relevant to THIS observation — not generic categories, but real analytical lenses that could reveal something new
 4. Score each dimension's contribution to the overall picture (contributions must sum to exactly 100)
 5. Assign a direction: positive (amplifying/bullish/supportive), negative (suppressing/bearish/contrary), or neutral
 6. Identify the dominant pattern — one precise declarative sentence
@@ -44,18 +48,18 @@ Dimension discovery rules by domain:
 - Medicine/Clinical: onset chronology, vital signs, laboratory markers, imaging findings, medication history, differential diagnosis, risk factors, evidence base, guideline alignment, contraindication flags
 - Law/Legal: case precedent, applicable statute, jurisdictional scope, burden of proof, evidence weight, timeline, damages exposure, appeal pathway, regulatory compliance, contract terms
 - Technology/Systems: architectural integrity, security posture, performance metrics, scalability, technical debt, dependency risk, code coverage, observability, data flow, failure modes
-- Science/Research: evidence quality, methodology soundness, data integrity, replication status, peer review, statistical significance, confounding variables, publication bias, instrument calibration, hypothesis specificity
-- Astrophysics/Space: photometric data, spectral analysis, orbital mechanics, temporal variation, energy flux, spatial coordinates, instrument calibration, catalog comparison, cosmological context, prediction confidence
+- Astrophysics/Space/Solar System: photometric data, spectral analysis, orbital mechanics, temporal variation, energy flux, spatial coordinates, instrument calibration, catalog comparison, cosmological context, prediction confidence
+- Small-Body/Active Asteroid: Tisserand parameter (T_J), orbital classification, dust/coma activity, multi-epoch photometry, cometary element comparison, perihelion passage timing, non-gravitational forces, MPC designation, taxonomy, activity mechanism
 - Food/Culinary: ingredient cost, margin, labour intensity, shelf life, seasonality, allergen profile, preparation complexity, waste factor, staff training, guest experience
 - General: if none of the above — choose the 10 lenses most likely to reveal something the operator cannot see unaided
 
 Authority registry (cite the most relevant 2-4 for this observation's domain):
-Finance: CME Group (cmegroup.com), FCA (fca.org.uk), SEC (sec.gov), LSE Rules (londonstockexchange.com/resources/equities-trading-resources), LSEG (lseg.com), Coinbase (coinbase.com), Binance (binance.com)
+Finance: CME Group (cmegroup.com), FCA (fca.org.uk), SEC (sec.gov), LSE Rules (londonstockexchange.com), LSEG (lseg.com), Coinbase (coinbase.com), Binance (binance.com)
 Medicine/UK: NHS (nhs.uk), NICE (nice.org.uk), GMC (gmc-uk.org), MHRA (gov.uk/mhra), WHO (who.int), SNOMED CT (snomed.org), MeSH/NLM (nlm.nih.gov/mesh)
 Medicine/US: FDA (fda.gov), CDC (cdc.gov), NIH MedlinePlus (medlineplus.gov), WHO (who.int)
 Law/UK: MoJ Courts Glossary (gov.uk), Law Society (lawsociety.org.uk), Cornell LII (law.cornell.edu)
 Law/US: Cornell LII (law.cornell.edu), Black's Law (thelawdictionary.org), SEC (sec.gov)
-Astrophysics: IAU (iau.org), NASA (nasa.gov), ESA (esa.int), ESO (eso.org), NASA ADS (adsabs.harvard.edu)
+Astrophysics: IAU (iau.org), IAU MPC (minorplanetcenter.net), NASA (nasa.gov), JPL SBDB (ssd.jpl.nasa.gov), ESA (esa.int), ESO (eso.org), NASA ADS (adsabs.harvard.edu)
 Technology/Computing: IEEE (ieee.org), IETF (ietf.org), W3C (w3.org), ACM (acm.org), NIST (nist.gov)
 Engineering: NIST (nist.gov), ISO (iso.org), IEEE (ieee.org), ASME (asme.org)
 Standards (cross-domain): ISO (iso.org), BSI (bsigroup.com), NIST (nist.gov)
@@ -63,8 +67,8 @@ Earth/Climate: USGS (usgs.gov), Met Office (metoffice.gov.uk), IPCC (ipcc.ch)
 
 Return ONLY valid JSON in this exact structure (no markdown, no fences):
 {
-  "inferredDomain": "<primary domain name, e.g. Finance>",
-  "inferredDomainFull": "<domain / sub-domain, e.g. Finance / Precious Metals>",
+  "inferredDomain": "<primary domain name, e.g. Astrophysics>",
+  "inferredDomainFull": "<domain / sub-domain, e.g. Astrophysics / Small-Body / Active Asteroids>",
   "confidence": <integer 0-100>,
   "dimensions": [
     { "id": "<short_snake_case_id>", "name": "<Dimension Name>", "signal": "<specific signal relevant to the observation — if a quantity is needed but unavailable, state that explicitly>", "contribution": <integer 5-22>, "direction": "positive|negative|neutral" },
@@ -86,7 +90,7 @@ Return ONLY valid JSON in this exact structure (no markdown, no fences):
     "<specific action 3>"
   ],
   "citedAuthorities": [
-    { "shortName": "<e.g. NICE>", "name": "<full name>", "url": "<https://...>", "tier": "primary|regulatory|reference|standard|glossary", "relevance": "<one sentence: why this authority governs this observation>" },
+    { "shortName": "<e.g. IAU MPC>", "name": "<full name>", "url": "<https://...>", "tier": "primary|regulatory|reference|standard|glossary", "relevance": "<one sentence: why this authority governs this observation>" },
     ... 2-4 entries
   ]
 }`;
@@ -128,7 +132,7 @@ function buildFallback(observation: string) {
   };
 }
 
-// ── Step 3: Domain Router — keyword scoring, no Gemini ────────────────────
+// ── Domain keyword scorer ──────────────────────────────────────────────────
 
 const DOMAIN_SIGNALS: Record<string, { primary: string[]; secondary: string[] }> = {
   Finance: {
@@ -136,20 +140,31 @@ const DOMAIN_SIGNALS: Record<string, { primary: string[]; secondary: string[] }>
     secondary: ["market", "rate", "fund", "trade", "exchange", "vol", "volatility", "bond", "index", "asset", "hedge", "short", "long", "options", "commodit"],
   },
   Medicine: {
-    primary: ["patient", "symptom", "diagnosis", "clinical", "drug", "dose", "therapy", "disease", "syndrome", "fever", "pain", "cardiac", "neuro", "pulmonary", "oncolog", "patholog", "presenting", "anemia", "hypertension", "diabetes", "pupil", "dilation"],
+    primary: ["patient", "symptom", "diagnosis", "clinical", "drug", "dose", "therapy", "disease", "syndrome", "fever", "pain", "cardiac", "neuro", "pulmonary", "oncolog", "patholog", "presenting", "anemia", "hypertension", "diabetes", "pupil", "dilation", "troponin", "ecg", "spo2", "saturation"],
     secondary: ["health", "medical", "treatment", "blood", "tissue", "cell", "test", "scan", "hospital", "biopsy", "imaging", "mri", "ct", "lab"],
   },
   Law: {
-    primary: ["contract", "clause", "court", "statute", "jurisdiction", "liability", "damages", "plaintiff", "defendant", "arbitration", "appeal", "breach", "notice", "counterparty", "indemnit"],
+    primary: ["contract", "clause", "court", "statute", "jurisdiction", "liability", "damages", "plaintiff", "defendant", "arbitration", "appeal", "breach", "notice", "counterparty", "indemnit", "limitation period", "force majeure"],
     secondary: ["legal", "compliance", "agreement", "filing", "evidence", "precedent", "counsel", "regulatory", "tort", "injunction", "settlement"],
   },
   Technology: {
-    primary: ["latency", "server", "database", "api", "cpu", "memory", "cache", "deployment", "vulnerability", "dependency", "microservice", "garbage collection", "throughput", "uptime", "cve", "kubernetes"],
-    secondary: ["system", "software", "hardware", "network", "code", "architecture", "performance", "security", "service", "container", "timeout", "spike"],
+    primary: ["latency", "server", "database", "api", "cpu", "memory", "cache", "deployment", "vulnerability", "dependency", "microservice", "garbage collection", "throughput", "uptime", "cve", "kubernetes", "heap", "certificate", "http", "503", "timeout"],
+    secondary: ["system", "software", "hardware", "network", "code", "architecture", "performance", "security", "service", "container", "spike"],
   },
   Astrophysics: {
-    primary: ["spectral", "wavelength", "nm", "flux", "photometric", "magnitude", "orbit", "parsec", "stellar", "galactic", "emission", "absorption", "hydrogen", "spectrograph", "photometry", "656", "light curve"],
-    secondary: ["telescope", "star", "galaxy", "cosmic", "space", "astronomical", "nebula", "quasar", "redshift", "supernova", "pulsar", "spectra"],
+    primary: [
+      "spectral", "wavelength", "nm", "flux", "photometric", "magnitude", "orbit", "parsec",
+      "stellar", "galactic", "emission", "absorption", "hydrogen", "spectrograph", "photometry",
+      "light curve", "asteroid", "comet", "perihelion", "aphelion", "tisserand", "t_j",
+      "dust tail", "active asteroid", "minor planet", "orbital period", "heliocentric",
+      "solar system", "small body", "coma", "albedo", "mpc", "sbdb", "2005 qn",
+      "active comet", "recurrent", "non-gravitational", "yarkovsky",
+    ],
+    secondary: [
+      "telescope", "star", "galaxy", "cosmic", "space", "astronomical", "nebula",
+      "quasar", "redshift", "supernova", "pulsar", "spectra", "orbital", "dust",
+      "passage", "detection", "km", "au ", "planetary", "solar", "designation",
+    ],
   },
 };
 
@@ -169,10 +184,11 @@ function detectDomain(text: string): { domain: string; confidence: number } {
   return { domain: topDomain, confidence };
 }
 
-// ── Steps 1+2+4: Source Registry + Coverage Calculator + Obs→Source Match ──
+// ── Coverage check ─────────────────────────────────────────────────────────
 
 router.post("/observe/coverage", async (req, res) => {
-  const { observation } = req.body;
+  const { observation, domain: domainOverride } = req.body as { observation?: string; domain?: string };
+
   if (!observation || typeof observation !== "string" || observation.trim().length === 0) {
     res.status(400).json({ success: false, error: "observation is required" });
     return;
@@ -180,7 +196,10 @@ router.post("/observe/coverage", async (req, res) => {
   const trimmed = observation.trim();
 
   try {
-    const { domain, confidence } = detectDomain(trimmed);
+    const detected = domainOverride
+      ? { domain: domainOverride, confidence: 95 }
+      : detectDomain(trimmed);
+    const { domain, confidence } = detected;
 
     const [authRows, sourceRows] = await Promise.all([
       domain === "General"
@@ -233,7 +252,7 @@ router.post("/observe/coverage", async (req, res) => {
 // ── SIMON full analysis ────────────────────────────────────────────────────
 
 router.post("/observe", async (req, res) => {
-  const { observation } = req.body;
+  const { observation, domain: domainOverride } = req.body as { observation?: string; domain?: string };
 
   if (!observation || typeof observation !== "string" || observation.trim().length === 0) {
     res.status(400).json({ success: false, error: "observation is required" });
@@ -243,7 +262,7 @@ router.post("/observe", async (req, res) => {
   const trimmed = observation.trim();
 
   try {
-    const prompt = buildObservationPrompt(trimmed);
+    const prompt = buildObservationPrompt(trimmed, domainOverride);
     const raw = await callGemini(prompt);
     const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     const parsed = JSON.parse(cleaned);

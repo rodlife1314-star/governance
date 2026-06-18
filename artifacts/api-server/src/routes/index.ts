@@ -10,6 +10,7 @@ import sovereignRouter from "./sovereign";
 import geminiRouter from "./gemini";
 import dimensionsRouter from "./dimensions";
 import observeRouter from "./observe";
+import aetherRouter from "./aether";
 import authoritiesRouter from "./authorities";
 
 const router: IRouter = Router();
@@ -25,6 +26,7 @@ router.use(sovereignRouter);
 router.use(geminiRouter);
 router.use(dimensionsRouter);
 router.use(observeRouter);
+router.use(aetherRouter);
 router.use(authoritiesRouter);
 
 export default router;

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getAbsoluteUrl } from "./utils";
-import { LiveFeedData, DimensionalAnalysis, FeedRecord, Finding, ObservationAnalysis, CoverageReport } from "./augment-types";
+import { LiveFeedData, DimensionalAnalysis, FeedRecord, Finding, ObservationAnalysis, CoverageReport, AetherRequirementPacket } from "./augment-types";
 import { AssetId, ASSETS, getAsset } from "./assets";
 import { DomainId, getDomain } from "./domains";
 
@@ -15,6 +15,7 @@ import DomainStandby from "./components/DomainStandby";
 import ObservationAperture from "./components/ObservationAperture";
 import CoverageGate from "./components/CoverageGate";
 import ObservationResult from "./components/ObservationResult";
+import AetherGate from "./components/AetherGate";
 
 type Mode = "augment" | "archive" | "action";
 type AugmentTab = "field" | "dims" | "intel";
@@ -35,7 +36,15 @@ interface AuditRecord {
   divergenceDelta: number;
 }
 
-type AppState = "aperture" | "analyzing" | "coverage" | "result" | "field";
+const DOMAIN_API_MAP: Record<DomainId, string> = {
+  FINANCE: "Finance",
+  MEDICINE: "Medicine",
+  LAW: "Law",
+  IT: "Technology",
+  ASTROPHYSICS: "Astrophysics",
+};
+
+type AppState = "aperture" | "aether" | "coverage" | "result" | "field";
 
 export default function App() {
   // ── Top-level app state ────────────────────────────────────────────────────
@@ -45,6 +54,9 @@ export default function App() {
   const [coverageReport, setCoverageReport] = useState<CoverageReport | null>(null);
   const [analysisReady, setAnalysisReady] = useState(false);
   const fieldEnteredRef = useRef(false);
+  const [aetherPacket, setAetherPacket] = useState<AetherRequirementPacket | null>(null);
+  const [hintedDomainId, setHintedDomainId] = useState<DomainId | null>(null);
+  const hintedDomainApiRef = useRef<string | null>(null);
 
   // ── Field mode state ───────────────────────────────────────────────────────
   const [mode, setMode] = useState<Mode>("augment");
@@ -254,33 +266,42 @@ export default function App() {
     setRawObservation(text);
     setCoverageReport(null);
     setObservationAnalysis(null);
+    setAetherPacket(null);
     setAnalysisReady(false);
+    setAppState("aether");
 
-    // Fire both requests immediately — coverage is fast (keyword scoring),
-    // analysis is slow (Gemini). Coverage gate appears first; SIMON follows.
+    const hintDomain = hintedDomainApiRef.current;
+    const body = { observation: text, ...(hintDomain ? { domain: hintDomain } : {}) };
+
+    // Fire all three in parallel. AETHER and coverage resolve fast; analysis is slow.
+    const aetherPromise = fetch(getAbsoluteUrl("/api/observe/aether"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }).then(r => r.json()).then(d => {
+      if (d?.success) setAetherPacket(d as AetherRequirementPacket);
+    }).catch(() => {});
+
     const coveragePromise = fetch(getAbsoluteUrl("/api/observe/coverage"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ observation: text }),
-    }).then(r => r.json()).catch(() => null);
+      body: JSON.stringify(body),
+    }).then(r => r.json()).then(d => {
+      if (d?.success) setCoverageReport(d as CoverageReport);
+    }).catch(() => {});
 
     const analysisPromise = fetch(getAbsoluteUrl("/api/observe"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ observation: text }),
-    }).then(r => r.json()).catch(() => null);
+      body: JSON.stringify(body),
+    }).then(r => r.json()).then(d => {
+      if (d?.success) { setObservationAnalysis(d as ObservationAnalysis); setAnalysisReady(true); }
+    }).catch(() => {});
 
-    // Coverage resolves first → enter coverage gate
-    const covData = await coveragePromise;
-    if (covData?.success) setCoverageReport(covData as CoverageReport);
-    setAppState("coverage");
-
-    // Analysis resolves later → mark ready (button lights up in CoverageGate)
-    const analysisData = await analysisPromise;
-    if (analysisData?.success) {
-      setObservationAnalysis(analysisData as ObservationAnalysis);
-      setAnalysisReady(true);
-    }
+    // AETHER drives the gate sequence — wait for it, coverage + analysis run to completion.
+    await aetherPromise;
+    void coveragePromise;
+    void analysisPromise;
   }, []);
 
   // ── Observation seal (from result view) ───────────────────────────────────
@@ -370,7 +391,31 @@ export default function App() {
           <ObservationAperture
             key="aperture"
             onSubmit={handleObservationSubmit}
-            onFieldMode={() => setAppState("field")}
+            domain={hintedDomainId ? getDomain(hintedDomainId) : undefined}
+            onFieldMode={() => {
+              hintedDomainApiRef.current = null;
+              setHintedDomainId(null);
+              setAppState("field");
+            }}
+          />
+        )}
+
+        {/* ── AETHER GATE: uncertainty map → retrieval requirement packet ─────── */}
+        {appState === "aether" && (
+          <AetherGate
+            key="aether"
+            observation={rawObservation}
+            packet={aetherPacket}
+            onProceed={() => setAppState("coverage")}
+            onNewObservation={() => {
+              setAetherPacket(null);
+              setCoverageReport(null);
+              setObservationAnalysis(null);
+              setAnalysisReady(false);
+              hintedDomainApiRef.current = null;
+              setHintedDomainId(null);
+              setAppState("aperture");
+            }}
           />
         )}
 
@@ -380,49 +425,19 @@ export default function App() {
             key="coverage"
             observation={rawObservation}
             report={coverageReport}
+            aetherPacket={aetherPacket}
             analysisReady={analysisReady}
             onViewAnalysis={() => setAppState("result")}
             onNewObservation={() => {
               setCoverageReport(null);
               setObservationAnalysis(null);
+              setAetherPacket(null);
               setAnalysisReady(false);
+              hintedDomainApiRef.current = null;
+              setHintedDomainId(null);
               setAppState("aperture");
             }}
           />
-        )}
-
-        {/* ── ANALYZING: brief fallback loading state ───────────────────────── */}
-        {appState === "analyzing" && (
-          <motion.div
-            key="analyzing"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
-            className="flex-1 flex flex-col items-center justify-center bg-[#07080B]"
-          >
-            <div className="text-center max-w-lg px-8">
-              <div className="text-[9px] font-mono text-[#E0AF68] tracking-[0.3em] uppercase mb-4">
-                RAPIDS · DISCOVERING DIMENSIONS
-              </div>
-              <div className="text-[11px] font-mono text-[#6B7B8E] leading-relaxed mb-8 italic">
-                "{rawObservation.length > 90 ? rawObservation.slice(0, 90) + "…" : rawObservation}"
-              </div>
-              <div className="flex items-center justify-center gap-2 mb-6">
-                {Array.from({ length: 10 }).map((_, i) => (
-                  <motion.div
-                    key={i}
-                    className="w-1 h-1 rounded-full bg-[#E0AF68]"
-                    animate={{ opacity: [0.15, 1, 0.15] }}
-                    transition={{ duration: 1.6, repeat: Infinity, delay: i * 0.16 }}
-                  />
-                ))}
-              </div>
-              <div className="text-[8px] font-mono text-[#3A4555] tracking-wider">
-                Inferring domain · Discovering dimensions · Compressing through RAPIDS
-              </div>
-            </div>
-          </motion.div>
         )}
 
         {/* ── LEVELS 1–4: Observation result ────────────────────────────────── */}
@@ -430,7 +445,13 @@ export default function App() {
           <ObservationResult
             key="result"
             analysis={observationAnalysis}
-            onNewObservation={() => { setObservationAnalysis(null); setAppState("aperture"); }}
+            onNewObservation={() => {
+              setObservationAnalysis(null);
+              setAetherPacket(null);
+              hintedDomainApiRef.current = null;
+              setHintedDomainId(null);
+              setAppState("aperture");
+            }}
             onSeal={handleObservationSeal}
             sealing={sealing}
             sealedFlash={sealedFlash}
@@ -474,7 +495,11 @@ export default function App() {
                 >
                   <AnimatePresence mode="wait">
                     {selectedDomain !== "FINANCE" ? (
-                      <DomainStandby key={selectedDomain} domain={getDomain(selectedDomain)} onObserve={() => setAppState("aperture")} />
+                      <DomainStandby key={selectedDomain} domain={getDomain(selectedDomain)} onObserve={() => {
+                        hintedDomainApiRef.current = DOMAIN_API_MAP[selectedDomain];
+                        setHintedDomainId(selectedDomain);
+                        setAppState("aperture");
+                      }} />
                     ) : (
                       <motion.div
                         key="finance"

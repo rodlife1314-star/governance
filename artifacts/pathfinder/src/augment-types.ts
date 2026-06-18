@@ -36,6 +36,44 @@ export interface ObservationAnalysis extends DimensionalAnalysis {
   citedAuthorities?: CitedAuthority[];
 }
 
+// ── AETHER Requirement Packet ──────────────────────────────────────────────
+
+export type AetherEvidenceType = "observation" | "record" | "measurement" | "model" | "catalog";
+
+export interface AetherEvidenceItem {
+  id: string;
+  label: string;
+  description: string;
+  evidenceType: AetherEvidenceType;
+}
+
+export interface AetherAuthorityLink {
+  shortName: string;
+  name: string;
+  url: string;
+  tier: string;
+  reason: string;
+}
+
+export interface AetherBlockedAuthority {
+  shortName: string;
+  name: string;
+  url: string;
+  reason: string;
+}
+
+export interface AetherRequirementPacket {
+  rawObservation: string;
+  domain: string;
+  subDomain: string;
+  uncertaintyClass: string;
+  uncertaintyStatement: string;
+  neededEvidence: AetherEvidenceItem[];
+  authorityChain: AetherAuthorityLink[];
+  blockedAuthorities: AetherBlockedAuthority[];
+  retrievalStatus: "READY_FOR_RAPIDS" | "DEGRADED";
+}
+
 // ── Coverage gate types ────────────────────────────────────────────────────
 
 export interface AuthorityRecord {

@@ -1,10 +1,11 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, ArrowRight, Shield, Database, AlertTriangle, CheckCircle2, Lock } from "lucide-react";
-import { CoverageReport, AuthorityRecord, DataSourceRecord } from "../augment-types";
+import { ArrowLeft, ArrowRight, Shield, Database, AlertTriangle, CheckCircle2, Lock, XCircle } from "lucide-react";
+import { CoverageReport, AuthorityRecord, DataSourceRecord, AetherRequirementPacket } from "../augment-types";
 
 interface CoverageGateProps {
   observation: string;
   report: CoverageReport | null;
+  aetherPacket: AetherRequirementPacket | null;
   analysisReady: boolean;
   onViewAnalysis: () => void;
   onNewObservation: () => void;
@@ -112,6 +113,7 @@ function SkeletonBlock({ lines = 3 }: { lines?: number }) {
 export default function CoverageGate({
   observation,
   report,
+  aetherPacket,
   analysisReady,
   onViewAnalysis,
   onNewObservation,
@@ -163,8 +165,8 @@ export default function CoverageGate({
             <div className="text-[7px] font-mono text-[#4A5568] uppercase tracking-wider mb-0.5">
               PHASE
             </div>
-            <div className="text-[9px] font-mono font-bold text-[#E0AF68]">
-              COVERAGE CHECK
+            <div className="text-[9px] font-mono font-bold text-[#64D2FF]">
+              RAPIDS · COVERAGE
             </div>
           </div>
         </div>
@@ -174,6 +176,60 @@ export default function CoverageGate({
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-3xl mx-auto px-4 md:px-6 py-6 space-y-5">
 
+          {/* AETHER requirement context (if packet available) */}
+          {aetherPacket && (
+            <motion.div
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className="border border-[#5E8FFF]/15 rounded-lg p-4 bg-[#5E8FFF]/[0.02]"
+            >
+              <div className="flex items-start justify-between gap-4 mb-2">
+                <div>
+                  <div className="text-[7px] font-mono text-[#5E8FFF]/60 uppercase tracking-[0.2em] mb-1">
+                    AETHER REQUIREMENT · {aetherPacket.domain}
+                  </div>
+                  <div className="text-[10px] font-mono font-bold text-white/70">
+                    {aetherPacket.uncertaintyClass}
+                  </div>
+                </div>
+                <div
+                  className="text-[7px] font-mono font-bold px-2 py-0.5 rounded shrink-0"
+                  style={{
+                    backgroundColor: "#4CD96412",
+                    border: "1px solid #4CD96425",
+                    color: "#4CD964",
+                  }}
+                >
+                  {aetherPacket.retrievalStatus.replace(/_/g, " ")}
+                </div>
+              </div>
+              <div className="text-[9px] font-mono text-[#5A6575] leading-relaxed">
+                {aetherPacket.uncertaintyStatement}
+              </div>
+
+              {/* Blocked authorities from AETHER */}
+              {aetherPacket.blockedAuthorities.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-white/[0.04]">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <XCircle className="w-2.5 h-2.5 text-[#FF6B6B]/50" />
+                    <span className="text-[7px] font-mono text-[#4A5568] uppercase tracking-[0.2em]">
+                      BLOCKED BY AETHER — HERMES WILL NOT INGEST FROM THESE
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    {aetherPacket.blockedAuthorities.map((b) => (
+                      <div key={b.shortName} className="flex items-start gap-2">
+                        <span className="text-[9px] font-mono font-bold text-[#FF6B6B]/50 shrink-0">{b.shortName}</span>
+                        <span className="text-[8px] font-mono text-[#4A4555] leading-relaxed">— {b.reason}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          )}
+
           {/* Domain detected */}
           <motion.div
             initial={{ opacity: 0, y: 6 }}
@@ -182,7 +238,7 @@ export default function CoverageGate({
             className="border border-white/[0.07] rounded-lg p-4 bg-white/[0.015]"
           >
             <div className="text-[7px] font-mono text-[#4A5568] uppercase tracking-[0.2em] mb-2">
-              Domain Detected
+              Domain Routed
             </div>
             {report ? (
               <div className="flex items-center justify-between gap-4">
@@ -207,7 +263,7 @@ export default function CoverageGate({
             ) : (
               <div className="flex items-center gap-2">
                 <motion.div className="w-1.5 h-1.5 rounded-full bg-[#E0AF68]" animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1, repeat: Infinity }} />
-                <span className="text-[10px] font-mono text-[#4A5568]">Routing observation to domain…</span>
+                <span className="text-[10px] font-mono text-[#4A5568]">Routing observation to domain registry…</span>
               </div>
             )}
           </motion.div>
@@ -224,10 +280,10 @@ export default function CoverageGate({
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-1.5">
                   <Shield className="w-3 h-3 text-[#E0AF68]/50" />
-                  <span className="text-[7px] font-mono text-[#4A5568] uppercase tracking-[0.2em]">Authorities</span>
+                  <span className="text-[7px] font-mono text-[#4A5568] uppercase tracking-[0.2em]">Registered Authorities</span>
                 </div>
                 {report && (
-                  <span className="text-[8px] font-mono text-[#3A4555]">{totalAuthorities} registered</span>
+                  <span className="text-[8px] font-mono text-[#3A4555]">{totalAuthorities} in registry</span>
                 )}
               </div>
               {report ? (
@@ -311,7 +367,7 @@ export default function CoverageGate({
         </div>
       </div>
 
-      {/* ── Step 5: Authority Coverage Badge + Analysis status ── */}
+      {/* ── Footer: coverage badge + analysis status ── */}
       <div className="shrink-0 border-t border-white/[0.05] bg-[#07080B]">
         <div className="px-4 md:px-6 py-3 flex items-center justify-between gap-4">
 
