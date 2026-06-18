@@ -474,7 +474,7 @@ export default function App() {
                 >
                   <AnimatePresence mode="wait">
                     {selectedDomain !== "FINANCE" ? (
-                      <DomainStandby key={selectedDomain} domain={getDomain(selectedDomain)} />
+                      <DomainStandby key={selectedDomain} domain={getDomain(selectedDomain)} onObserve={() => setAppState("aperture")} />
                     ) : (
                       <motion.div
                         key="finance"
