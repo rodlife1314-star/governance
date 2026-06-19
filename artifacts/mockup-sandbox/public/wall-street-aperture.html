@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WALL STREET APERTURE v0.2 — PKT-520 Gold</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#05080C; color:#E2E8F0; font-family:'JetBrains Mono','Courier New',monospace; overflow:hidden; height:100vh; }
+  #canvas-container { position:fixed; inset:0; z-index:0; }
+  #scanline { position:fixed; inset:0; pointer-events:none; z-index:5;
+    background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,229,255,0.007) 2px,rgba(0,229,255,0.007) 4px); }
+  #hud { position:fixed; inset:0; z-index:10; pointer-events:none; }
+
+  /* TOP */
+  #top-bar {
+    position:absolute; top:0; left:0; right:0;
+    padding:14px 20px;
+    display:flex; justify-content:space-between; align-items:flex-start;
+    background:linear-gradient(180deg,rgba(5,8,12,0.96) 0%,transparent 100%);
+    border-bottom:1px solid rgba(0,229,255,0.07);
+  }
+  #packet-id { font-size:9px; color:#00E5FF; letter-spacing:0.2em; margin-bottom:4px; }
+  #challenge-text { font-size:12px; color:#E2E8F0; max-width:500px; line-height:1.4; }
+  #state-badge { font-size:9px; letter-spacing:0.15em; padding:3px 10px; border-radius:3px; border:1px solid; }
+
+  /* CUSTODY PATH — vertical thread labels on left */
+  #custody-path {
+    position:absolute; left:20px; top:100px;
+    display:flex; flex-direction:column; gap:0; pointer-events:none;
+  }
+  .custody-step {
+    display:flex; align-items:flex-start; gap:10px;
+    padding:8px 0;
+  }
+  .custody-spine {
+    display:flex; flex-direction:column; align-items:center; flex-shrink:0;
+  }
+  .custody-dot {
+    width:10px; height:10px; border-radius:50%;
+    border:2px solid; flex-shrink:0;
+  }
+  .custody-line {
+    width:1px; flex:1; min-height:42px;
+  }
+  .custody-info { padding-top:1px; }
+  .custody-tf { font-size:10px; font-weight:700; letter-spacing:0.1em; }
+  .custody-role { font-size:8px; color:#4B5563; margin-top:1px; }
+  .custody-finding { font-size:8px; color:#6B7280; margin-top:3px; max-width:160px; line-height:1.4; }
+  .custody-integrity {
+    display:flex; align-items:center; gap:5px; margin-top:4px;
+  }
+  .int-bar { width:50px; height:2px; background:rgba(30,42,58,0.8); border-radius:1px; overflow:hidden; }
+  .int-fill { height:100%; border-radius:1px; }
+  .int-pct { font-size:7px; color:#374151; }
+
+  /* RIGHT PANEL */
+  #right-panel {
+    position:absolute; right:20px; top:100px; bottom:80px;
+    width:190px; display:flex; flex-direction:column; gap:8px; overflow:hidden;
+  }
+  .panel-section {
+    background:rgba(10,15,20,0.88); border:1px solid rgba(30,42,58,0.8);
+    border-radius:6px; padding:10px 12px; backdrop-filter:blur(4px);
+  }
+  .panel-label { font-size:8px; color:#374151; letter-spacing:0.15em; margin-bottom:8px; }
+  .evidence-item { display:flex; gap:7px; align-items:flex-start; padding:3px 0; }
+  .ev-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; margin-top:2px; }
+  .ev-text { font-size:9px; color:#94A3B8; line-height:1.3; }
+  .ev-tf { font-size:7px; color:#374151; }
+  .friction-item { display:flex; gap:6px; align-items:flex-start; padding:4px 0; border-bottom:1px solid rgba(30,42,58,0.3); cursor:pointer; pointer-events:all; }
+  .friction-item:last-child { border-bottom:none; }
+  .fr-icon { font-size:10px; flex-shrink:0; }
+  .fr-text { font-size:8px; color:#6B7280; line-height:1.4; }
+  .fr-layer { font-size:7px; color:#374151; margin-top:1px; }
+
+  /* BOTTOM */
+  #bottom-bar {
+    position:absolute; bottom:0; left:0; right:0;
+    padding:12px 20px; display:flex; justify-content:space-between; align-items:center;
+    background:linear-gradient(0deg,rgba(5,8,12,0.97) 0%,transparent 100%);
+    border-top:1px solid rgba(0,229,255,0.07);
+  }
+  #gate-section { display:flex; align-items:center; gap:12px; }
+  #gate-indicator { display:flex; align-items:center; gap:8px; padding:5px 12px; border-radius:4px; border:1px solid; }
+  #gate-dot { width:7px; height:7px; border-radius:50%; }
+  #gate-label { font-size:9px; font-weight:700; letter-spacing:0.12em; }
+  #seal-text { font-size:8px; color:#374151; letter-spacing:0.05em; }
+  #thread-status { display:flex; align-items:center; gap:8px; }
+  #thread-label { font-size:9px; letter-spacing:0.1em; color:#4B5563; }
+  #coherence-bar { width:70px; height:3px; background:rgba(30,42,58,0.8); border-radius:2px; overflow:hidden; }
+  #coherence-fill { height:100%; border-radius:2px; }
+  #confidence-text { font-size:9px; color:#4B5563; }
+
+  /* TOOLTIP */
+  #tooltip {
+    position:absolute; background:rgba(8,11,16,0.97); border:1px solid rgba(0,229,255,0.25);
+    border-radius:5px; padding:8px 11px; font-size:9px; color:#94A3B8;
+    pointer-events:none; display:none; max-width:210px; line-height:1.6; z-index:20;
+  }
+
+  /* LEGEND */
+  #legend {
+    position:absolute; bottom:56px; right:20px;
+    font-size:8px; color:#374151; letter-spacing:0.08em;
+    background:rgba(10,15,20,0.7); border:1px solid rgba(30,42,58,0.5);
+    border-radius:4px; padding:6px 10px; line-height:1.8;
+  }
+</style>
+</head>
+<body>
+<div id="canvas-container"></div>
+<div id="scanline"></div>
+<div id="hud">
+  <div id="top-bar">
+    <div>
+      <div id="packet-id">PKT-520 · GOLD FUTURES GC · WALL STREET APERTURE v0.2</div>
+      <div id="challenge-text">Analyze Gold Volatility trends and options pricing skew during macro shifts.</div>
+    </div>
+    <div id="state-badge"></div>
+  </div>
+  <div id="custody-path"></div>
+  <div id="right-panel">
+    <div class="panel-section">
+      <div class="panel-label">HERMES · EVIDENCE NODES</div>
+      <div id="evidence-list"></div>
+    </div>
+    <div class="panel-section">
+      <div class="panel-label">JEMMA · FRICTION</div>
+      <div id="friction-list"></div>
+    </div>
+  </div>
+  <div id="bottom-bar">
+    <div id="gate-section">
+      <div id="gate-indicator">
+        <div id="gate-dot"></div>
+        <div id="gate-label"></div>
+      </div>
+      <div id="seal-text"></div>
+    </div>
+    <div id="thread-status">
+      <div id="thread-label">THREAD</div>
+      <div id="coherence-bar"><div id="coherence-fill"></div></div>
+      <div id="confidence-text"></div>
+    </div>
+  </div>
+  <div id="legend">
+    DRAG · orbit &nbsp;|&nbsp; SCROLL · zoom &nbsp;|&nbsp; HOVER · inspect
+  </div>
+  <div id="tooltip"></div>
+</div>
+
+<script type="importmap">{"imports":{"three":"https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+
+// ─── SCENE DATA — output of mapPacketToScene(PKT-520) ────────────────────────
+const SCENE = {
+  packetId:"PKT-520", asset:"GC", assetName:"Gold Futures",
+  state:"OPERATOR_APPROVED",
+  challenge:"Analyze Gold Volatility trends and options pricing skew during macro shifts.",
+  confidence:96,
+  thread:{
+    state:"FLOWING", coherenceScore:0.612,
+    entryTimeframe:"D1", exitTimeframe:"M5", blockedAt:null,
+    render:{visible:true,color:"#00E5FF",thickness:1.4,animated:true,glowIntensity:0.612}
+  },
+  geometry:{
+    d1:{timeframe:"D1",role:"strategic_terrain",authorityWeight:1.0,
+      finding:"Strong bullish expansion sequence active. D1 impulse leg established from $1980 to $2430.",
+      invalidationLine:1980.0,bias:"BULLISH",integrityScore:0.768,
+      render:{scale:4.0,opacity:0.86,color:"#10B981",pulseRate:0}},
+    h4:{timeframe:"H4",role:"structural_body",authorityWeight:0.8,
+      finding:"Bullish order block mitigation complete at $2280. Establishing higher low consolidation.",
+      invalidationLine:2280.0,bias:"BULLISH",integrityScore:0.614,
+      render:{scale:2.5,opacity:0.77,color:"#10B981",pulseRate:0}},
+    m15:{timeframe:"M15",role:"tactical_path",authorityWeight:0.4,
+      finding:"382 Trap pattern identified. Liquidity sweep of prior session low at $2310.",
+      invalidationLine:2305.0,bias:"BULLISH",integrityScore:0.307,
+      render:{scale:1.5,opacity:0.58,color:"#10B981",pulseRate:0}},
+    m5:{timeframe:"M5",role:"witness_doorway",authorityWeight:0.1,
+      finding:"Confirmation witness layer: Vector candle trap validated. Market structure shift to upside confirmed.",
+      invalidationLine:2310.0,bias:"BULLISH",integrityScore:0.077,
+      render:{scale:0.8,opacity:0.45,color:"#10B981",pulseRate:1.2}}
+  },
+  evidenceNodes:[
+    {id:"EVD-AUTH-0",label:"CME",source:"CME",strength:"CONFIRMED",timeframe:"MACRO",
+      render:{orbitRadius:2.2,orbitSpeed:0.8,size:0.35,color:"#00E5FF",label:"CME"}},
+    {id:"EVD-AUTH-1",label:"FRED",source:"FRED",strength:"CONFIRMED",timeframe:"MACRO",
+      render:{orbitRadius:2.5,orbitSpeed:0.8,size:0.35,color:"#00E5FF",label:"FRED"}},
+    {id:"EVD-DATA-0",label:"CME_GOLD_OI_PROFILE",source:"CME",strength:"PROBABLE",timeframe:"MACRO",
+      render:{orbitRadius:3.2,orbitSpeed:0.5,size:0.25,color:"#67E8F9",label:"OI Profile"}},
+    {id:"EVD-DATA-1",label:"CME_GOLD_OPTIONS",source:"CME",strength:"PROBABLE",timeframe:"MACRO",
+      render:{orbitRadius:3.45,orbitSpeed:0.5,size:0.25,color:"#67E8F9",label:"Options Skew"}},
+    {id:"EVD-MACRO-0",label:"Real Yields",source:"MACRO",strength:"MARGINAL",timeframe:"MACRO",
+      render:{orbitRadius:4.5,orbitSpeed:0.2,size:0.18,color:"#1E3A4A",label:"Real Yields"}},
+    {id:"EVD-MACRO-1",label:"DXY",source:"MACRO",strength:"MARGINAL",timeframe:"MACRO",
+      render:{orbitRadius:4.9,orbitSpeed:0.2,size:0.18,color:"#1E3A4A",label:"DXY"}},
+    {id:"EVD-MACRO-2",label:"Fed Funds Rate",source:"MACRO",strength:"MARGINAL",timeframe:"MACRO",
+      render:{orbitRadius:5.3,orbitSpeed:0.2,size:0.18,color:"#1E3A4A",label:"Fed Funds"}},
+    {id:"EVD-MACRO-3",label:"Geopolitics",source:"MACRO",strength:"MARGINAL",timeframe:"MACRO",
+      render:{orbitRadius:5.7,orbitSpeed:0.2,size:0.18,color:"#1E3A4A",label:"Geopolitics"}}
+  ],
+  frictionNodes:[
+    {id:"FRC-0",challenge:"M15 integrity is low (31%). Tactical layer may not hold the thesis.",
+      severity:"WARNING",targetLayer:"M15",resolved:false,
+      render:{position:"joint",intensity:0.69,color:"#F59E0B",animated:false}},
+    {id:"FRC-1",challenge:"M5 integrity is critically low (8%). Witness doorway is barely open.",
+      severity:"CHALLENGE",targetLayer:"M5",resolved:false,
+      render:{position:"joint",intensity:0.92,color:"#EF4444",animated:true}}
+  ],
+  ambiguityShell:{
+    active:false,reason:"",frozenTerms:[],detectedAt:"",
+    render:{opacity:0.0,color:"#F59E0B",pulseRate:0,crackLines:0}
+  },
+  operatorGate:{
+    state:"APPROVED",sealSignature:"OP-SEAL-8891-ROD-SOVEREIGN",
+    confidence:96,contractId:"CRYSTAL-CONTRACT-4122BA32",
+    render:{illuminated:true,color:"#10B981",coreGlowRadius:2.4,sealVisible:true,rotationRate:0}
+  },
+  meta:{
+    mappedAt:new Date().toISOString(),
+    doctrineVersion:"wallstreet-doctrine/v1.0",
+    sessionCount:1,
+    macroDrivers:["Real Yields","DXY","Fed Funds Rate","Geopolitics"],
+    preferredSession:"London"
+  }
+};
+
+// ─── CHAMBER SPATIAL POSITIONS — vertical custody sequence ───────────────────
+const CHAMBER_Y = { D1: 7.5, H4: 3.2, M15: -0.8, M5: -4.5 };
+const GATE_Y    = -7.2;
+
+// ─── THREE.JS SETUP ───────────────────────────────────────────────────────────
+
+const container = document.getElementById('canvas-container');
+const renderer  = new THREE.WebGLRenderer({antialias:true,alpha:true});
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setClearColor(0x05080C, 1);
+container.appendChild(renderer.domElement);
+
+const scene  = new THREE.Scene();
+scene.fog    = new THREE.FogExp2(0x05080C, 0.028);
+
+const camera = new THREE.PerspectiveCamera(52, window.innerWidth/window.innerHeight, 0.1, 200);
+camera.position.set(0, 2, 20);
+camera.lookAt(0, 1, 0);
+
+// Lights
+scene.add(new THREE.AmbientLight(0x0a1520, 1.4));
+const cyanLight = new THREE.PointLight(0x00E5FF, 2.0, 22);
+cyanLight.position.set(0, 6, 2);
+scene.add(cyanLight);
+const greenLight = new THREE.PointLight(0x10B981, 1.4, 16);
+greenLight.position.set(-2, -4, 4);
+scene.add(greenLight);
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+
+const hex = c => new THREE.Color(c);
+
+function solidMat(color, opacity) {
+  return new THREE.MeshStandardMaterial({
+    color:hex(color), emissive:hex(color), emissiveIntensity:0.5,
+    transparent:true, opacity, side:THREE.FrontSide
+  });
+}
+function wireMat(color, opacity) {
+  return new THREE.MeshBasicMaterial({color:hex(color),wireframe:true,transparent:true,opacity});
+}
+
+// ─── STARFIELD ────────────────────────────────────────────────────────────────
+
+const starPos = new Float32Array(1200*3);
+for (let i=0;i<1200*3;i++) starPos[i]=(Math.random()-0.5)*140;
+const starGeo = new THREE.BufferGeometry();
+starGeo.setAttribute('position',new THREE.BufferAttribute(starPos,3));
+scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({color:0x1E2A3A,size:0.07})));
+
+// ─── GRID ─────────────────────────────────────────────────────────────────────
+
+const grid = new THREE.GridHelper(40,40,0x0D1F2D,0x0D1F2D);
+grid.position.y = -9.5;
+grid.material.transparent = true;
+grid.material.opacity = 0.35;
+scene.add(grid);
+
+// ─── THE THREAD — vertical spine ──────────────────────────────────────────────
+
+const threadGroup = new THREE.Group();
+scene.add(threadGroup);
+
+(function buildThread() {
+  const pts = [
+    new THREE.Vector3(0, CHAMBER_Y.D1  + 3.2, 0),
+    new THREE.Vector3(0, CHAMBER_Y.D1,         0),
+    new THREE.Vector3(0, CHAMBER_Y.H4,         0),
+    new THREE.Vector3(0, CHAMBER_Y.M15,        0),
+    new THREE.Vector3(0, CHAMBER_Y.M5,         0),
+    new THREE.Vector3(0, GATE_Y,               0),
+  ];
+  const curve = new THREE.CatmullRomCurve3(pts);
+
+  const tubeGeo = new THREE.TubeGeometry(curve, 60, 0.025, 5, false);
+  const tubeMat = new THREE.MeshBasicMaterial({
+    color:hex(SCENE.thread.render.color), transparent:true, opacity:0.92
+  });
+  threadGroup.add(new THREE.Mesh(tubeGeo, tubeMat));
+
+  const haloGeo = new THREE.TubeGeometry(curve, 60, 0.09, 5, false);
+  const haloMat = new THREE.MeshBasicMaterial({
+    color:hex(SCENE.thread.render.color), transparent:true, opacity:0.1
+  });
+  threadGroup.add(new THREE.Mesh(haloGeo, haloMat));
+
+  const arrowGeo = new THREE.ConeGeometry(0.12, 0.35, 5);
+  const arrowMat = new THREE.MeshBasicMaterial({color:hex("#00E5FF"),transparent:true,opacity:0.8});
+  const arrow = new THREE.Mesh(arrowGeo, arrowMat);
+  arrow.position.set(0, CHAMBER_Y.D1 + 3.6, 0);
+  arrow.rotation.z = Math.PI;
+  threadGroup.add(arrow);
+})();
+
+// ─── TIMEFRAME CHAMBERS ───────────────────────────────────────────────────────
+
+const CHAMBER_GEOS = {
+  D1:  () => new THREE.OctahedronGeometry(1, 1),
+  H4:  () => new THREE.IcosahedronGeometry(1, 0),
+  M15: () => new THREE.DodecahedronGeometry(1, 0),
+  M5:  () => new THREE.TetrahedronGeometry(1, 0),
+};
+
+const chamberMeshes  = {};
+const chamberWires   = {};
+const chamberGroups  = {};
+
+['D1','H4','M15','M5'].forEach(tf => {
+  const ch    = SCENE.geometry[tf.toLowerCase()];
+  const y     = CHAMBER_Y[tf];
+  const s     = ch.render.scale * 0.70;
+  const color = ch.render.color;
+  const geo   = CHAMBER_GEOS[tf]();
+
+  const group = new THREE.Group();
+  group.position.set(0, y, 0);
+  scene.add(group);
+  chamberGroups[tf] = group;
+
+  const solid = new THREE.Mesh(geo, solidMat(color, ch.render.opacity * 0.14));
+  solid.scale.setScalar(s);
+  solid.userData = {
+    chamber:true, timeframe:tf, bias:ch.bias,
+    finding:ch.finding, invalidation:ch.invalidationLine,
+    integrityScore:ch.integrityScore
+  };
+  group.add(solid);
+  chamberMeshes[tf] = solid;
+
+  const wire = new THREE.Mesh(geo.clone(), wireMat(color, ch.render.opacity * 0.6));
+  wire.scale.setScalar(s * 1.05);
+  group.add(wire);
+  chamberWires[tf] = wire;
+
+  const torusGeo = new THREE.TorusGeometry(s * 1.15, 0.012, 4, 36);
+  const torusMat = new THREE.MeshBasicMaterial({
+    color:hex(color), transparent:true, opacity:0.35
+  });
+  const torus = new THREE.Mesh(torusGeo, torusMat);
+  torus.rotation.x = Math.PI / 2;
+  group.add(torus);
+
+  const planeGeo = new THREE.CircleGeometry(s * 0.9, 32);
+  const planeMat = new THREE.MeshBasicMaterial({
+    color:hex(color), transparent:true, opacity:0.06,
+    side:THREE.DoubleSide
+  });
+  const plane = new THREE.Mesh(planeGeo, planeMat);
+  plane.rotation.x = -Math.PI / 2;
+  plane.position.y = -s * 1.1;
+  group.add(plane);
+});
+
+['D1','H4','M15'].forEach((tf, i) => {
+  const nextTf = ['H4','M15','M5'][i];
+  const y0 = CHAMBER_Y[tf];
+  const y1 = CHAMBER_Y[nextTf];
+  const pts = [new THREE.Vector3(0, y0, 0), new THREE.Vector3(0, y1, 0)];
+  const geo = new THREE.BufferGeometry().setFromPoints(pts);
+  const mat = new THREE.LineBasicMaterial({
+    color:hex("#00E5FF"), transparent:true, opacity:0.08
+  });
+  scene.add(new THREE.Line(geo, mat));
+});
+
+// ─── EVIDENCE NODES ───────────────────────────────────────────────────────────
+
+const evidenceObjects = [];
+
+function evidenceHomeY(node) {
+  if (node.strength === "CONFIRMED") return CHAMBER_Y.D1;
+  if (node.strength === "PROBABLE")  return CHAMBER_Y.H4;
+  return CHAMBER_Y.M15;
+}
+
+SCENE.evidenceNodes.forEach((node, i) => {
+  const r    = node.render;
+  const homeY = evidenceHomeY(node);
+  const geo  = new THREE.SphereGeometry(r.size * 0.48, 7, 7);
+  const mat  = new THREE.MeshStandardMaterial({
+    color:hex(r.color), emissive:hex(r.color), emissiveIntensity:0.7,
+    transparent:true, opacity: node.strength==="CONFIRMED" ? 0.95 : 0.6
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+
+  const angle = (i / SCENE.evidenceNodes.length) * Math.PI * 2;
+  mesh.position.set(
+    Math.cos(angle) * r.orbitRadius,
+    homeY + (Math.sin(i * 0.9) * 0.4),
+    Math.sin(angle) * r.orbitRadius
+  );
+  mesh.userData = {
+    orbitRadius: r.orbitRadius,
+    orbitSpeed:  r.orbitSpeed * (node.strength === "CONFIRMED" ? 1.0 : 0.55),
+    orbitAngle:  angle,
+    orbitBaseY:  homeY + (Math.sin(i * 0.9) * 0.4),
+    label:       r.label,
+    source:      node.source,
+    strength:    node.strength,
+  };
+  scene.add(mesh);
+  evidenceObjects.push(mesh);
+});
+
+// ─── FRICTION NODES ───────────────────────────────────────────────────────────
+
+const frictionSpikes = [];
+
+SCENE.frictionNodes.forEach((fn, i) => {
+  const r        = fn.render;
+  const targetTf = fn.targetLayer.toUpperCase();
+  const chamberY = CHAMBER_Y[targetTf] ?? CHAMBER_Y.M15;
+  const ch       = SCENE.geometry[fn.targetLayer.toLowerCase()];
+  const s        = ch ? ch.render.scale * 0.70 : 1.0;
+
+  const geo = new THREE.ConeGeometry(0.05, 0.4, 4);
+  const mat = new THREE.MeshBasicMaterial({
+    color:hex(r.color), transparent:true, opacity:0.9 * r.intensity
+  });
+  const spike = new THREE.Mesh(geo, mat);
+
+  const theta = (i / SCENE.frictionNodes.length) * Math.PI * 2 + 0.8;
+  const phi   = Math.PI * 0.28 + (i * 0.5);
+  spike.position.set(
+    Math.sin(phi) * Math.cos(theta) * (s * 1.18),
+    chamberY + Math.cos(phi) * (s * 1.18),
+    Math.sin(phi) * Math.sin(theta) * (s * 1.18)
+  );
+  spike.lookAt(0, chamberY, 0);
+  spike.rotateX(Math.PI / 2);
+
+  spike.userData = {
+    isFriction:  true,
+    challenge:   fn.challenge,
+    severity:    fn.severity,
+    targetLayer: fn.targetLayer,
+    animated:    r.animated,
+  };
+  scene.add(spike);
+  frictionSpikes.push(spike);
+
+  const ringGeo = new THREE.TorusGeometry(0.12, 0.012, 4, 16);
+  const ringMat = new THREE.MeshBasicMaterial({
+    color:hex(r.color), transparent:true, opacity:0.5 * r.intensity
+  });
+  const ring = new THREE.Mesh(ringGeo, ringMat);
+  ring.position.copy(spike.position);
+  ring.lookAt(0, chamberY, 0);
+  scene.add(ring);
+});
+
+// ─── AMBIGUITY SHELL ─────────────────────────────────────────────────────────
+
+if (SCENE.ambiguityShell.active) {
+  const shellGeo = new THREE.SphereGeometry(8, 12, 12);
+  const shellMat = new THREE.MeshBasicMaterial({
+    color:hex(SCENE.ambiguityShell.render.color),
+    transparent:true,
+    opacity:SCENE.ambiguityShell.render.opacity,
+    wireframe:true,
+    side:THREE.DoubleSide,
+  });
+  scene.add(new THREE.Mesh(shellGeo, shellMat));
+}
+
+// ─── OPERATOR GATE ────────────────────────────────────────────────────────────
+
+const gateGroup = new THREE.Group();
+gateGroup.position.set(0, GATE_Y, 0);
+scene.add(gateGroup);
+
+const gateColor = SCENE.operatorGate.render.color;
+
+const gateSphere = new THREE.Mesh(
+  new THREE.SphereGeometry(0.28, 16, 16),
+  new THREE.MeshStandardMaterial({
+    color:hex(gateColor), emissive:hex(gateColor),
+    emissiveIntensity: SCENE.operatorGate.render.illuminated ? 2.5 : 0.3,
+    transparent:true, opacity:0.98
+  })
+);
+gateSphere.userData = {
+  isGate:true, state:SCENE.operatorGate.state,
+  seal:SCENE.operatorGate.sealSignature,
+  contract:SCENE.operatorGate.contractId,
+  confidence:SCENE.operatorGate.confidence,
+};
+gateGroup.add(gateSphere);
+
+[0.7, 1.1, 1.55].forEach((r, i) => {
+  const tGeo = new THREE.TorusGeometry(r, 0.015, 4, 48);
+  const tMat = new THREE.MeshBasicMaterial({
+    color:hex(gateColor), transparent:true, opacity:0.45 - i*0.1
+  });
+  const t = new THREE.Mesh(tGeo, tMat);
+  t.rotation.x = Math.PI/2 + i * 0.3;
+  t.rotation.y = i * 0.5;
+  t.userData = { isGateRing:true, ringIndex:i };
+  gateGroup.add(t);
+});
+
+// ─── RAYCASTER ────────────────────────────────────────────────────────────────
+
+const raycaster    = new THREE.Raycaster();
+const mouse        = new THREE.Vector2();
+const tooltip      = document.getElementById('tooltip');
+
+const allClickable = [
+  ...Object.values(chamberMeshes),
+  ...evidenceObjects,
+  ...frictionSpikes,
+  gateSphere,
+];
+
+renderer.domElement.addEventListener('mousemove', e => {
+  if (isDragging) return;
+  mouse.x =  (e.clientX / window.innerWidth)  * 2 - 1;
+  mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+  raycaster.setFromCamera(mouse, camera);
+  const hits = raycaster.intersectObjects(allClickable);
+
+  if (hits.length > 0) {
+    const d = hits[0].object.userData;
+    let html = '';
+
+    if (d.chamber) {
+      const intPct = (d.integrityScore * 100).toFixed(0);
+      const intColor = d.integrityScore > 0.5 ? '#10B981' : d.integrityScore > 0.25 ? '#F59E0B' : '#EF4444';
+      html = `<b style="color:#00E5FF">${d.timeframe}</b> &nbsp;·&nbsp; <span style="color:#10B981">${d.bias}</span><br>
+              ${d.finding}<br>
+              <span style="color:#374151">Invalidation: $${d.invalidation}</span><br>
+              <span style="color:${intColor}">Integrity: ${intPct}%</span>`;
+    } else if (d.label) {
+      const sc = {CONFIRMED:'#00E5FF',PROBABLE:'#67E8F9',MARGINAL:'#1E4A5A'}[d.strength];
+      html = `<b style="color:${sc}">${d.label}</b><br>${d.source} &nbsp;·&nbsp; ${d.strength}`;
+    } else if (d.isFriction) {
+      const sc = {WARNING:'#F59E0B',CHALLENGE:'#EF4444',BREACH:'#7F1D1D'}[d.severity];
+      html = `<b style="color:${sc}">⚡ JEMMA · ${d.severity}</b><br>
+              <span style="color:#4B5563">TARGET: ${d.targetLayer}</span><br>
+              ${d.challenge}`;
+    } else if (d.isGate) {
+      html = `<b style="color:${gateColor}">OPERATOR GATE · ${d.state}</b><br>
+              ${d.seal ?? 'No seal'}<br>
+              <span style="color:#374151">${d.contract}</span><br>
+              <span style="color:#374151">Confidence: ${d.confidence}%</span>`;
+    }
+
+    if (html) {
+      tooltip.innerHTML = html;
+      tooltip.style.display = 'block';
+      tooltip.style.left = (e.clientX + 16) + 'px';
+      tooltip.style.top  = Math.max(10, e.clientY - 30) + 'px';
+    }
+  } else {
+    tooltip.style.display = 'none';
+  }
+});
+
+// ─── MOUSE ORBIT ──────────────────────────────────────────────────────────────
+
+let isDragging = false, prevMX = 0, prevMY = 0;
+let camTheta = 0.15, camPhi = 0.30, camDist = 20;
+
+renderer.domElement.addEventListener('mousedown', e => { isDragging=true; prevMX=e.clientX; prevMY=e.clientY; });
+window.addEventListener('mouseup', () => { isDragging=false; });
+renderer.domElement.addEventListener('mousemove', e => {
+  if (!isDragging) return;
+  camTheta -= (e.clientX - prevMX) * 0.006;
+  camPhi   -= (e.clientY - prevMY) * 0.004;
+  camPhi    = Math.max(0.05, Math.min(Math.PI*0.5, camPhi));
+  prevMX = e.clientX; prevMY = e.clientY;
+});
+renderer.domElement.addEventListener('wheel', e => {
+  camDist = Math.max(7, Math.min(32, camDist + e.deltaY * 0.025));
+}, {passive:true});
+
+let prevTX=0, prevTY=0;
+renderer.domElement.addEventListener('touchstart', e=>{ prevTX=e.touches[0].clientX; prevTY=e.touches[0].clientY; });
+renderer.domElement.addEventListener('touchmove', e=>{
+  camTheta -= (e.touches[0].clientX - prevTX) * 0.006;
+  camPhi   -= (e.touches[0].clientY - prevTY) * 0.004;
+  camPhi    = Math.max(0.05, Math.min(Math.PI*0.5, camPhi));
+  prevTX=e.touches[0].clientX; prevTY=e.touches[0].clientY;
+}, {passive:true});
+
+// ─── HUD POPULATION ───────────────────────────────────────────────────────────
+
+const badge = document.getElementById('state-badge');
+const stateC = {
+  'OPERATOR_APPROVED':     {bg:'rgba(16,185,129,0.1)',  border:'#10B981', color:'#10B981'},
+  'AWAITING_VALIDATION':   {bg:'rgba(245,158,11,0.1)',  border:'#F59E0B', color:'#F59E0B'},
+  'RECOMMENDATION_CREATED':{bg:'rgba(107,114,128,0.1)', border:'#6B7280', color:'#6B7280'},
+}[SCENE.state] ?? {bg:'rgba(107,114,128,0.1)',border:'#6B7280',color:'#6B7280'};
+Object.assign(badge.style, {background:stateC.bg,borderColor:stateC.border,color:stateC.color});
+badge.textContent = SCENE.state;
+
+const custodyPath = document.getElementById('custody-path');
+const tfColors = {BULLISH:'#10B981',BEARISH:'#EF4444',NEUTRAL:'#6B7280',CONTESTED:'#F59E0B'};
+const roleNames = {d1:'Strategic Terrain',h4:'Structural Body',m15:'Tactical Path',m5:'Witness Doorway'};
+['d1','h4','m15','m5'].forEach((key, i, arr) => {
+  const ch  = SCENE.geometry[key];
+  const col = tfColors[ch.bias];
+  const pct = (ch.integrityScore * 100).toFixed(0);
+  const iCol = ch.integrityScore > 0.5 ? '#10B981' : ch.integrityScore > 0.25 ? '#F59E0B' : '#EF4444';
+  const isLast = i === arr.length - 1;
+
+  const step = document.createElement('div');
+  step.className = 'custody-step';
+  step.innerHTML = `
+    <div class="custody-spine">
+      <div class="custody-dot" style="background:${col}22;border-color:${col};box-shadow:0 0 5px ${col}66"></div>
+      ${!isLast ? `<div class="custody-line" style="background:linear-gradient(180deg,${col}44,#0D1F2D)"></div>` : ''}
+    </div>
+    <div class="custody-info">
+      <div class="custody-tf" style="color:${col}">${ch.timeframe}</div>
+      <div class="custody-role">${roleNames[key]}</div>
+      <div class="custody-finding">${ch.finding.substring(0, 70)}${ch.finding.length > 70 ? '…' : ''}</div>
+      <div class="custody-integrity">
+        <div class="int-bar"><div class="int-fill" style="width:${pct}%;background:${iCol}"></div></div>
+        <span class="int-pct" style="color:${iCol}">${pct}%</span>
+      </div>
+    </div>
+  `;
+  custodyPath.appendChild(step);
+});
+
+const evidenceList = document.getElementById('evidence-list');
+const evCol = {CONFIRMED:'#00E5FF',PROBABLE:'#67E8F9',MARGINAL:'#1E4A5A'};
+const evHome = {CONFIRMED:'D1',PROBABLE:'H4',MARGINAL:'M15'};
+SCENE.evidenceNodes.slice(0,6).forEach(n => {
+  const item = document.createElement('div');
+  item.className = 'evidence-item';
+  item.innerHTML = `
+    <div class="ev-dot" style="background:${evCol[n.strength]}"></div>
+    <div>
+      <div class="ev-text">${n.render.label}</div>
+      <div class="ev-tf">${n.strength} · orbits ${evHome[n.strength]}</div>
+    </div>
+  `;
+  evidenceList.appendChild(item);
+});
+if (SCENE.evidenceNodes.length > 6) {
+  const m = document.createElement('div');
+  m.style.cssText='font-size:8px;color:#374151;margin-top:3px';
+  m.textContent=`+${SCENE.evidenceNodes.length-6} more`;
+  evidenceList.appendChild(m);
+}
+
+const frictionList = document.getElementById('friction-list');
+const frIcons = {WARNING:'⚡',CHALLENGE:'🔴',BREACH:'💀'};
+const frColors = {WARNING:'#F59E0B',CHALLENGE:'#EF4444',BREACH:'#7F1D1D'};
+if (!SCENE.frictionNodes.length) {
+  frictionList.innerHTML='<div style="font-size:8px;color:#374151">No active friction</div>';
+} else {
+  SCENE.frictionNodes.forEach(fn => {
+    const item = document.createElement('div');
+    item.className='friction-item';
+    item.innerHTML=`
+      <span class="fr-icon">${frIcons[fn.severity]}</span>
+      <div>
+        <div class="fr-text" style="color:${frColors[fn.severity]}">${fn.challenge}</div>
+        <div class="fr-layer">Target: ${fn.targetLayer}</div>
+      </div>
+    `;
+    frictionList.appendChild(item);
+  });
+}
+
+const gc = {APPROVED:'#10B981',PENDING_REVIEW:'#F59E0B',LOCKED:'#374151'}[SCENE.operatorGate.state];
+const gDot   = document.getElementById('gate-dot');
+const gLabel = document.getElementById('gate-label');
+const gInd   = document.getElementById('gate-indicator');
+gDot.style.cssText   = `background:${gc};box-shadow:0 0 6px ${gc}`;
+gLabel.style.color   = gc;
+gLabel.textContent   = `${SCENE.operatorGate.state}`;
+gInd.style.cssText  += `;border-color:${gc};background:${gc}18`;
+if (SCENE.operatorGate.sealSignature) {
+  document.getElementById('seal-text').textContent = SCENE.operatorGate.sealSignature;
+}
+
+const cf = document.getElementById('coherence-fill');
+const threadC = {FLOWING:'#00E5FF',CONTESTED:'#F59E0B',BLOCKED:'#EF4444',SEVERED:'#7F1D1D'};
+cf.style.width      = `${(SCENE.thread.coherenceScore*100).toFixed(0)}%`;
+cf.style.background = threadC[SCENE.thread.state];
+document.getElementById('thread-label').style.color = threadC[SCENE.thread.state];
+document.getElementById('confidence-text').textContent =
+  `${(SCENE.thread.coherenceScore*100).toFixed(0)}% · PKT ${SCENE.confidence}%`;
+
+// ─── ANIMATION LOOP ───────────────────────────────────────────────────────────
+
+const clock = new THREE.Clock();
+
+function animate() {
+  requestAnimationFrame(animate);
+  const t = clock.getElapsedTime();
+
+  camera.position.x = camDist * Math.sin(camTheta) * Math.sin(camPhi);
+  camera.position.y = camDist * Math.cos(camPhi) + 1.5;
+  camera.position.z = camDist * Math.cos(camTheta) * Math.sin(camPhi);
+  camera.lookAt(0, 1.5, 0);
+  if (!isDragging) camTheta += 0.0006;
+
+  chamberMeshes.D1.rotation.y = t * 0.04;
+  chamberMeshes.D1.rotation.x = t * 0.015;
+  chamberWires.D1.rotation.y  = t * 0.04;
+  chamberWires.D1.rotation.x  = t * 0.015;
+
+  chamberMeshes.H4.rotation.y = t * -0.07;
+  chamberMeshes.H4.rotation.z = t * 0.025;
+  chamberWires.H4.rotation.y  = t * -0.07;
+  chamberWires.H4.rotation.z  = t * 0.025;
+
+  chamberMeshes.M15.rotation.y = t * 0.12;
+  chamberMeshes.M15.rotation.x = t * -0.04;
+  chamberWires.M15.rotation.y  = t * 0.12;
+  chamberWires.M15.rotation.x  = t * -0.04;
+
+  const m5s = SCENE.geometry.m5.render.scale * 0.70;
+  const m5pulse = 1.0 + Math.sin(t * SCENE.geometry.m5.render.pulseRate * Math.PI * 2) * 0.07;
+  chamberMeshes.M5.rotation.y = t * -0.22;
+  chamberMeshes.M5.rotation.z = t * 0.09;
+  chamberWires.M5.rotation.y  = t * -0.22;
+  chamberWires.M5.rotation.z  = t * 0.09;
+  chamberMeshes.M5.scale.setScalar(m5s * m5pulse);
+  chamberWires.M5.scale.setScalar(m5s * m5pulse * 1.05);
+
+  threadGroup.children.forEach((child, i) => {
+    if (child.material && i > 0) {
+      child.material.opacity = 0.07 + Math.sin(t * 1.4 + i) * 0.04;
+    }
+  });
+
+  evidenceObjects.forEach(obj => {
+    const d = obj.userData;
+    d.orbitAngle += d.orbitSpeed * 0.007;
+    obj.position.x = Math.cos(d.orbitAngle) * d.orbitRadius;
+    obj.position.z = Math.sin(d.orbitAngle) * d.orbitRadius;
+    obj.position.y = d.orbitBaseY + Math.sin(t * 0.4 + d.orbitAngle) * 0.15;
+  });
+
+  frictionSpikes.forEach((spike, i) => {
+    if (spike.userData.animated) {
+      spike.material.opacity = 0.6 + Math.sin(t * 2.5 + i) * 0.35;
+    }
+  });
+
+  gateGroup.children.forEach((child, i) => {
+    if (child.userData.isGateRing) {
+      child.rotation.z = t * (0.3 + i * 0.15);
+      child.rotation.x = Math.PI/2 + Math.sin(t * 0.2 + i) * 0.2;
+    }
+  });
+  gateSphere.material.emissiveIntensity =
+    SCENE.operatorGate.render.illuminated ? 1.8 + Math.sin(t * 1.8) * 0.4 : 0.2;
+
+  cyanLight.position.x = Math.sin(t * 0.35) * 4;
+  cyanLight.position.z = Math.cos(t * 0.25) * 3;
+
+  renderer.render(scene, camera);
+}
+
+animate();
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+</script>
+</body>
+</html>
