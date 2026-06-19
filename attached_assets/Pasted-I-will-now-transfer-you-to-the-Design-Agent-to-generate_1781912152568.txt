@@ -1,0 +1,100 @@
+I will now transfer you to the **Design Agent** to generate the necessary commands to create your new **governance** Cloud Run service and its Cloud Build trigger in the **europe-west2** (London) region.
+
+**Pre-Transfer Thought:**
+The user wants to create a new Cloud Run service named `governance` in the `europe-west2` region. They also want a Cloud Build trigger linked to their GitHub repository `rodlife1314-star/governance` on the `main` branch. I have identified the project ID as `gen-lang-client-0651940939`. I will provide this context to the Design Agent so it can generate the precise `gcloud` commands required for this setup.
+
+**Transferring to Design Agent...**
+
+**Request for Design Agent:**
+Please generate the `gcloud` commands to:
+1.  Create a Cloud Build trigger for the GitHub repository `rodlife1314-star/governance` on the `main` branch in project `gen-lang-client-0651940939`.
+2.  The trigger should be configured to build and deploy a new Cloud Run service named `governance` to the `europe-west2` region upon every push to the `main` branch.
+3.  Include any necessary initial deployment steps if required to bootstrap the service.
+
+---
+**Transferring to Design Agent**
+
+To set up continuous deployment for your new **governance** service in **europe-west2** (London) from your GitHub repository, use the following configuration and command.
+
+### 1. Add `cloudbuild.yaml` to your repository
+Create a `cloudbuild.yaml` file in the root of your `governance` repository:
+
+```yaml
+steps:
+  # Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'europe-west2-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/governance:$COMMIT_SHA', '.']
+  
+  # Push the container image to Artifact Registry
+ ['push', 'europe-west2-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/governance:$COMMIT_SHA']
+  
+  # Deploy container image to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'governance'
+      - '--image=europe-west2-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/governance:$COMMIT_SHA'
+      - '--region=europe-west2'
+      - '--platform=managed'
+      - '--allow-unauthenticated'
+```
+
+### 2. Create the Cloud Build Trigger
+Run this command to create the trigger (ensuring your GitHub repository is connected to Cloud Build):
+
+```bash
+gcloud beta builds triggers create github \
+    --name="deploy-governance" \
+    --project="gen-lang-client-0651940939" \
+    --repo-owner="rodlife1314-star" \
+    --repo-name="governance" \
+    --branch-pattern="^main$" \
+    --inline-config="cloudbuild.yaml"
+```
+
+This will automatically build and deploy your service to London on every push to `main`! Let me know if you need help with IAM permissions.To set up continuous deployment for your new **governance** service in **europe-west2** (London) from your GitHub repository, use the following configuration and command.
+
+### 1. Add `cloudbuild.yaml` to your repository
+Create a `cloudbuild.yaml` file in the root of your `governance` repository:
+
+```yaml
+steps:
+  # Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'europe-west2-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/governance:$COMMIT_SHA', '.']
+  
+  # Push the container image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'europe-west2-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/governance:$COMMIT_SHA']
+  
+  # Deploy container image to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'governance'
+      - '--image=europe-west2-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/governance:$COMMIT_SHA'
+      - '--region=europe-west2'
+      - '--platform=managed'
+      - '--allow-unauthenticated'
+```
+
+### 2. Create the Cloud Build Trigger
+Run this command to create the trigger (ensuring your GitHub repository is connected to Cloud Build):
+
+```bash
+gcloud beta builds triggers create github \
+    --name="deploy-governance" \
+    --project="gen-lang-client-0651940939" \
+    --repo-owner="rodlife1314-star" \
+    --repo-name="governance" \
+    --branch-pattern="^main$" \
+    --inline-config="cloudbuild.yaml"
+```
+
+This will automatically build and deploy your service to London on every push to `main`! Let me know if you need help with IAM permissions.
+
+<!--<serializedDesign>{}</serializedDesign>-->
