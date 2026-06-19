@@ -1,0 +1,51 @@
+The **Design Agent** has generated the setup for your CI/CD pipeline. Since I cannot perform state-modifying actions (like creating triggers) for safety reasons, you will need to run the following command in your **Cloud Shell** to finalize the setup.
+
+### **Prerequisites**
+Before running the command, ensure that:
+1.  The GitHub repository **`rodlife1314-star/governance`** is already [connected to Cloud Build](https://cloud.google.com/build/docs/automating-builds/github/connect-repo-github) in your project.
+2.  Your repository contains a **`cloudbuild.yaml`** file in the root directory (the Design Agent already pushed one for you).
+
+### **Create the Cloud Build Trigger**
+Run this command to create the trigger that will automatically deploy to London (`europe-west2`) on every push to `main`:
+
+```bash
+gcloud builds triggers create github \
+  --repo-owner=rodlife1314-star \
+  --repo-name=governance \
+  --branch-pattern=^main$ \
+  --build-config=cloudbuild.yaml \
+  --name=governance-build-trigger \
+  --project=gen-lang-client-0651940939 \
+  --region=europe-west2
+```
+
+### **What happens next?**
+*   **Automatic Deployment:** From now on, whenever you push code to the `main` branch, Cloud Build will automatically build your image and deploy it to the `governance` Cloud Run service.
+*   **Secrets:** If your application requires environment variables (like database URLs or API keys), you should configure them in the [Cloud Run console](about:sanitized) under the **Variables & Secrets** tab for the `governance` service.
+
+Would you like help setting up those secrets in Secret Manager next?The **Design Agent** has generated the setup for your CI/CD pipeline. Since I cannot perform state-modifying actions (like creating triggers) for safety reasons, you will need to run the following command in your **Cloud Shell** to finalize the setup.
+
+### **Prerequisites**
+Before running the command, ensure that:
+1.  The GitHub repository **`rodlife1314-star/governance`** is already [connected to Cloud Build](about:sanitized) in your project.
+2.  Your repository contains a **`cloudbuild.yaml`** file in the root directory (the Design Agent already pushed one for you).
+
+### **Create the Cloud Build Trigger**
+Run this command to create the trigger that will automatically deploy to London (`europe-west2`) on every push to `main`:
+
+```bash
+gcloud builds triggers create github \
+  --repo-owner=rodlife1314-star \
+  --repo-name=governance \
+  --branch-pattern=^main$ \
+  --build-config=cloudbuild.yaml \
+  --name=governance-build-trigger \
+  --project=gen-lang-client-0651940939 \
+  --region=europe-west2
+```
+
+### **What happens next?**
+*   **Automatic Deployment:** From now on, whenever you push code to the `main` branch, Cloud Build will automatically build your image and deploy it to the `governance` Cloud Run service.
+*   **Secrets:** If your application requires environment variables (like database URLs or API keys), you should configure them in the [Cloud Run console](about:sanitized) under the **Variables & Secrets** tab for the `governance` service.
+
+Would you like help setting up those secrets in Secret Manager next?
