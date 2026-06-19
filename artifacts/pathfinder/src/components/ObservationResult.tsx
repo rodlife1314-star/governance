@@ -13,6 +13,7 @@ interface ObservationResultProps {
   onSeal: (text: string) => void;
   sealing: boolean;
   sealedFlash: boolean;
+  onLaunchSpectra?: () => void;
 }
 
 const ACTION_ICONS: Record<string, React.ReactNode> = {
@@ -38,6 +39,7 @@ export default function ObservationResult({
   onSeal,
   sealing,
   sealedFlash,
+  onLaunchSpectra,
 }: ObservationResultProps) {
   const [governanceOpen, setGovernanceOpen] = useState(false);
   const [augTab, setAugTab] = useState<"field" | "dims" | "intel">("field");
@@ -195,6 +197,16 @@ export default function ObservationResult({
               </button>
             ))}
           </div>
+
+          {/* SPECTRA-7 deep investigation — only available after domain classification */}
+          {onLaunchSpectra && (
+            <button
+              onClick={onLaunchSpectra}
+              className="shrink-0 flex items-center gap-1.5 px-3 py-1 rounded border border-[#e8405a]/25 bg-[#e8405a]/05 text-[8px] font-mono font-bold tracking-wider text-[#e8405a]/60 hover:text-[#e8405a] hover:border-[#e8405a]/50 transition-all cursor-pointer"
+            >
+              <span>SPECTRA-7 ↗</span>
+            </button>
+          )}
 
           {/* Seal observation */}
           <button

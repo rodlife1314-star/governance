@@ -14,69 +14,151 @@ async function callGemini(prompt: string, systemInstruction?: string): Promise<s
   return response.text ?? "";
 }
 
-const SYSTEM_PROMPT = `You are SPECTRA-7, an astrophysical spectroscopy analysis engine. You provide rigorous, technically precise reasoning about unusual spectral observations.
+// ── Domain-aware system prompts ───────────────────────────────────────────────
 
-Your analysis style:
-- Reference actual physics: quantum transitions, line formation mechanisms, diagnostic ratios
-- Use real astrophysical quantities and name the key discriminating observations
-- Be decisive but acknowledge what additional observations would confirm
-- Write in flowing prose, not bullet points
-- Keep it to ~200 words — dense and expert, not padded`;
+function buildAnalysisSystemPrompt(domain: string): string {
+  const domainGuide: Record<string, string> = {
+    ASTROPHYSICS: "You are SPECTRA-7, an astrophysical analysis engine. Reference real physics: orbital mechanics, radiation environments, propulsion theory, spectroscopy, mission architecture. Be technically precise.",
+    FINANCE:      "You are SPECTRA-7, a financial investigation engine. Reference real market mechanisms: price discovery, liquidity dynamics, macro drivers, instrument structure. Be analytically precise.",
+    MEDICINE:     "You are SPECTRA-7, a biomedical investigation engine. Reference real clinical mechanisms, diagnostic criteria, pathophysiology, and evidence-based protocols. Be medically precise.",
+    LAW:          "You are SPECTRA-7, a legal investigation engine. Reference real legal doctrine, statutes, precedent, and jurisdictional considerations. Be legally precise.",
+    IT:           "You are SPECTRA-7, a systems investigation engine. Reference real technical mechanisms, protocols, architecture patterns, and failure modes. Be technically precise.",
+  };
+  const base = domainGuide[domain.toUpperCase()] ?? "You are SPECTRA-7, a rigorous investigation engine. Apply domain expertise precisely.";
+  return `${base}
 
-const VERDICT_SYSTEM = `You are a senior astrophysicist giving a brief operator verdict. Based on the hypothesis analysis, give a 2-3 sentence conclusion: state whether this hypothesis should be the primary classification, the single most discriminating follow-up observation needed, and what confidence level you assign. Be direct. No bullet points.`;
+Analysis style:
+- Dense, expert prose — no bullet points
+- Name the discriminating observations or measurements
+- Be decisive but acknowledge what additional data would confirm
+- ~200 words — precise, not padded`;
+}
 
-type HypKey = "A" | "B" | "C" | "D";
+const VERDICT_SYSTEM = `You are a senior expert giving a brief operator verdict. Based on the analysis, give a 2-3 sentence conclusion: whether this hypothesis should be the primary classification, the single most discriminating follow-up observation or measurement, and your confidence level (0-100%). Direct. No bullet points.`;
 
-const HYPOTHESIS_PROMPTS: Record<HypKey, { title: string; analysisPrompt: string }> = {
-  A: {
-    title: "P CYGNI PROFILE — STELLAR WIND ANALYSIS",
-    analysisPrompt: `The observer has selected the P Cygni/stellar wind hypothesis to explain an anomalous emission at 656nm with: FWHM ~180 km/s (vs expected ~20 km/s), asymmetric profile, blue-shifted absorption trough at ~655.1nm (implying outflow at ~500 km/s), Hα/Hβ ratio of 8.2 (vs Case B 2.86), He II 4686Å detected, 6-day temporal variability, no radio detection.
+// ── /spectra/generate — domain-driven hypothesis generation ──────────────────
 
-Analyse whether the P Cygni hypothesis holds. Discuss the physics of line formation in stellar winds (Sobolev approximation, velocity law), what stellar class would produce these parameters, how He II fits in, and what the ~6 day variability could represent. What single follow-up observation would clinch or refute this interpretation?`,
-  },
-  B: {
-    title: "ACCRETION DISK EMISSION — COMPACT BINARY ANALYSIS",
-    analysisPrompt: `The observer has selected the compact binary/accretion disk hypothesis to explain an anomalous emission at 656nm with: FWHM ~180 km/s, asymmetric profile, blue-shifted absorption trough at ~655.1nm, Hα/Hβ ratio of 8.2 (vs Case B 2.86), He II 4686Å detected, 6-day temporal variability, marginal X-ray association, no radio detection.
+router.post("/spectra/generate", async (req, res) => {
+  const { observation, domain, subDomain } = req.body as {
+    observation?: string;
+    domain?: string;
+    subDomain?: string;
+  };
 
-Analyse whether the accretion disk hypothesis holds. Discuss the physics of disk emission line formation (double-peaked Keplerian profiles, disk wind, irradiation), what type of compact binary this could be (CV, LMXB, symbiotic), how the 6-day period fits an orbital scenario, why the Balmer decrement is elevated, and what the He II implies about the disk accretion rate. What single follow-up observation would confirm or refute this?`,
-  },
-  C: {
-    title: "RAMAN SCATTERING — SYMBIOTIC SYSTEM ANALYSIS",
-    analysisPrompt: `The observer has selected the Raman scattering/symbiotic star hypothesis to explain an anomalous emission at 656nm with: FWHM ~180 km/s, asymmetric and broad profile, blue-shifted absorption at ~655.1nm, Hα/Hβ ratio of 8.2, He II 4686Å present, 6-day variability, no radio detection.
-
-Analyse whether the Raman scattering/symbiotic star hypothesis holds. Explain the Raman scattering mechanism (OVI photons scattering off HI in the giant's wind), what wavelength shifts this produces, why the anomalous Balmer decrement could arise from optical depth effects in a dense nebula, whether the blue absorption could be a disk wind from the accreting white dwarf, and how the He II arises in symbiotic novae. Is 6 days consistent with symbiotic binary orbital motion? What observation would distinguish this from hypothesis A?`,
-  },
-  D: {
-    title: "SHOCK-EXCITED EMISSION — SNR INTERACTION ANALYSIS",
-    analysisPrompt: `The observer has selected the shock-excited emission/supernova remnant hypothesis to explain an anomalous emission at 656nm with: FWHM ~180 km/s, broad asymmetric profile, blue-shifted absorption trough, Hα/Hβ ratio of 8.2 (vs Case B 2.86), He II 4686Å detected, 6-day temporal variability, no radio detection.
-
-Analyse whether the shock-excited SNR/CSM interaction hypothesis holds. Explain shock-excited Balmer emission vs photoionised emission (the Chevalier & Fransson model), how non-radiative shocks produce narrow + broad Hα components, whether the observed width is consistent with shock velocities vs thermal broadening, why He II would appear in fast shock post-shock zones. How does the lack of radio emission constrain this? What does the 6-day variability imply — light travel time, CSM clumping? What would discriminate this from a compact binary?`,
-  },
-};
-
-router.post("/spectra/analyse", async (req, res) => {
-  const { hypKey } = req.body as { hypKey?: string };
-
-  if (!hypKey || !["A", "B", "C", "D"].includes(hypKey)) {
-    res.status(400).json({ success: false, error: "Invalid or missing hypKey (must be A, B, C, or D)" });
+  if (!observation || !domain) {
+    res.status(400).json({ success: false, error: "observation and domain required" });
     return;
   }
 
-  const hyp = HYPOTHESIS_PROMPTS[hypKey as HypKey];
+  const now = new Date();
+  const caseIdSuffix = now.toISOString().replace(/[-:T.Z]/g, "").slice(0, 12);
+
+  const generatePrompt = `You are SPECTRA-7, a deep investigation classification engine. Given an operator observation and its classified domain, generate a structured investigation case with exactly 4 competing hypotheses.
+
+Operator Observation: "${observation}"
+Domain: ${domain}${subDomain ? ` / ${subDomain}` : ""}
+Case Date: ${now.toISOString().slice(0, 10)}
+
+Generate 4 distinct, expert-level competing hypotheses that a domain authority would genuinely consider for this observation. Each hypothesis should represent a different interpretive lens or causal mechanism.
+
+Return ONLY valid JSON — no markdown, no surrounding text:
+{
+  "caseId": "SA-${caseIdSuffix}",
+  "caseTitle": "<concise case title — the core question or anomaly under investigation>",
+  "caseSubtitle": "<one sentence: what is being investigated and why it is uncertain>",
+  "contextSummary": "<2-3 sentences: what the observation reveals, what is ambiguous, what investigative context matters>",
+  "hypotheses": [
+    {
+      "id": "HYP-A",
+      "name": "<hypothesis name — the classification, mechanism, or interpretation being proposed>",
+      "desc": "<3-4 sentences: precisely why this hypothesis fits the observation, what mechanism it invokes, what evidence supports it, and what would discriminate it from alternatives>",
+      "prob": <integer 1-99>
+    },
+    {
+      "id": "HYP-B",
+      "name": "...",
+      "desc": "...",
+      "prob": <integer>
+    },
+    {
+      "id": "HYP-C",
+      "name": "...",
+      "desc": "...",
+      "prob": <integer>
+    },
+    {
+      "id": "HYP-D",
+      "name": "...",
+      "desc": "...",
+      "prob": <integer>
+    }
+  ]
+}
+
+The four prob values should sum to approximately 100. The hypotheses must be genuinely distinct — not variations of the same idea.`;
 
   try {
-    const analysis = await callGemini(hyp.analysisPrompt, SYSTEM_PROMPT);
+    const raw = await callGemini(
+      generatePrompt,
+      "Return only valid JSON. No markdown fences. No explanation outside the JSON object."
+    );
+    const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+    const result = JSON.parse(cleaned);
+    res.json({ success: true, ...result });
+  } catch (err: any) {
+    req.log.error(err, "Spectra generate failed");
+    res.status(500).json({ success: false, error: "Case generation failed" });
+  }
+});
 
-    const verdictPrompt = `${hyp.analysisPrompt}
+// ── /spectra/analyse — dynamic + legacy hypothesis analysis ──────────────────
+
+router.post("/spectra/analyse", async (req, res) => {
+  const {
+    observation, domain, caseTitle, caseContext,
+    hypName, hypDesc,
+  } = req.body as {
+    observation?: string;
+    domain?: string;
+    caseTitle?: string;
+    caseContext?: string;
+    hypName?: string;
+    hypDesc?: string;
+  };
+
+  if (!observation || !hypName || !hypDesc) {
+    res.status(400).json({ success: false, error: "observation, hypName and hypDesc are required" });
+    return;
+  }
+
+  const effectiveDomain = domain ?? "GENERAL";
+  const systemPrompt    = buildAnalysisSystemPrompt(effectiveDomain);
+
+  const analysisPrompt = `Domain: ${effectiveDomain}
+${caseTitle ? `Case: ${caseTitle}` : ""}
+${caseContext ? `Context: ${caseContext}` : ""}
+Operator Observation: "${observation}"
+
+Hypothesis Under Investigation: "${hypName}"
+${hypDesc}
+
+Analyse whether this hypothesis fits the observation. What mechanism does it invoke? What is the strongest evidence for and against it? What single follow-up observation or measurement would confirm or refute it decisively?`;
+
+  const title = `${hypName.toUpperCase()} — ANALYSIS`;
+
+  try {
+    const analysis = await callGemini(analysisPrompt, systemPrompt);
+
+    const verdictPrompt = `${analysisPrompt}
 
 Previous analysis:
 ${analysis}
 
-Now give your operator verdict: primary classification status, the ONE follow-up observation that would be definitive, and your confidence level (0-100%).`;
+Now give your operator verdict: primary classification status, the ONE follow-up action or measurement that would be definitive, and your confidence level (0-100%).`;
 
     const verdict = await callGemini(verdictPrompt, VERDICT_SYSTEM);
 
-    res.json({ success: true, analysis, verdict, title: hyp.title });
+    res.json({ success: true, analysis, verdict, title });
   } catch (err: any) {
     req.log.error(err, "Spectra analyse failed");
     res.status(500).json({ success: false, error: "Analysis engine error" });

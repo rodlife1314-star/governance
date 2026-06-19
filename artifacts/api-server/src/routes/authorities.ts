@@ -120,11 +120,12 @@ router.post("/data-sources", async (req, res) => {
 // public authority and specific API endpoint using Gemini + the authority registry.
 
 router.post("/authorities/locate-source", async (req, res) => {
-  const { dimensionId, dimensionName, asset, assetLabel } = req.body as {
+  const { dimensionId, dimensionName, asset, assetLabel, domain } = req.body as {
     dimensionId?: string;
     dimensionName: string;
     asset?: string;
     assetLabel?: string;
+    domain?: string;
   };
 
   if (!dimensionName) {
@@ -132,35 +133,65 @@ router.post("/authorities/locate-source", async (req, res) => {
     return;
   }
 
-  // Pull existing registered FINANCE authorities for context
+  const effectiveDomain = (domain ?? "GENERAL").toUpperCase();
+
+  // Pull registered authorities for the correct domain (not always FINANCE)
   let authorityList = "(none loaded)";
   try {
     const rows = await db.select().from(domainAuthorities)
-      .where(eq(domainAuthorities.domain, "FINANCE"))
+      .where(eq(domainAuthorities.domain, effectiveDomain))
       .orderBy(asc(domainAuthorities.sortOrder));
     if (rows.length > 0) {
       authorityList = rows.map((a) => `- ${a.shortName}: ${a.name} (${a.url})`).join("\n");
+    } else {
+      // Fall back to all domains if none registered for this domain yet
+      const all = await db.select().from(domainAuthorities).orderBy(asc(domainAuthorities.sortOrder));
+      if (all.length > 0) authorityList = all.map((a) => `- ${a.shortName}: ${a.name} [${a.domain}] (${a.url})`).join("\n");
     }
   } catch { /* proceed without registry — Gemini will suggest from its knowledge */ }
 
-  const prompt = `You are an authority source locator for a financial data system (Pathfinder).
+  // Domain-specific context for the prompt
+  const DOMAIN_CONTEXT: Record<string, string> = {
+    ASTROPHYSICS: "astrophysics, space science, and space-mission operations system",
+    FINANCE:      "financial markets and trading intelligence system",
+    MEDICINE:     "clinical and biomedical research system",
+    LAW:          "legal and regulatory compliance system",
+    IT:           "information technology and cybersecurity system",
+    GENERAL:      "multi-domain knowledge system",
+  };
+  const DOMAIN_ASSET_CONTEXT: Record<string, string> = {
+    ASTROPHYSICS: "space mission, astronomical object, or astrophysical phenomenon",
+    FINANCE:      "financial instrument or market",
+    MEDICINE:     "clinical subject or biomedical phenomenon",
+    LAW:          "legal matter or regulatory subject",
+    IT:           "technical system or service",
+    GENERAL:      "observable subject",
+  };
 
-TASK: Identify the single best public authority and specific API endpoint for this observable variable.
+  const domainCtx     = DOMAIN_CONTEXT[effectiveDomain]     ?? DOMAIN_CONTEXT.GENERAL;
+  const assetCtxLabel = DOMAIN_ASSET_CONTEXT[effectiveDomain] ?? DOMAIN_ASSET_CONTEXT.GENERAL;
+
+  const prompt = `You are an authority source locator for a ${domainCtx} (Pathfinder Operator System).
+
+TASK: Identify the single best external public authority and specific API endpoint for this observable variable.
 
 Variable: "${dimensionName}"
 Dimension ID: "${dimensionId ?? "unknown"}"
-Asset context: ${assetLabel ?? "financial instrument"} (${asset ?? "unknown"})
+Subject context: ${assetLabel ?? assetCtxLabel} (${asset ?? "unknown"})
+Domain: ${effectiveDomain}
 
 Registered authorities already in the system:
 ${authorityList}
 
 RULES:
-1. Prefer a registered authority from the list if it genuinely owns this variable.
-2. Cite only real endpoints you know to exist — do not fabricate URLs.
-3. Prefer free/public endpoints (no auth). If auth is unavoidable, state it clearly.
-4. Be specific: provide the full endpoint URL or path pattern, not just a homepage.
-5. State the actual data refresh cycle (real-time, daily, weekly, monthly, etc).
-6. "usesRegisteredAuthority" must be true only if the authority short name appears verbatim in the list above.
+1. Point OUTWARD at real external authoritative sources (e.g. for ASTROPHYSICS: NASA, ESA, JPL, NOAA SWPC, IAU, ESO, STScI; for FINANCE: CBOE, CME, Federal Reserve, BIS; etc).
+2. Prefer a registered authority from the list if it genuinely owns this variable.
+3. Cite only real endpoints you know to exist — do not fabricate URLs.
+4. Prefer free/public endpoints (no auth). If auth is unavoidable, state it clearly.
+5. Be specific: provide the full endpoint URL or path pattern, not just a homepage.
+6. State the actual data refresh cycle (real-time, daily, weekly, monthly, etc).
+7. "usesRegisteredAuthority" must be true only if the authority short name appears verbatim in the list above.
+8. NEVER suggest internal system endpoints or generic web searches — only real external authoritative sources.
 
 Return only valid JSON — no markdown, no surrounding text:
 {

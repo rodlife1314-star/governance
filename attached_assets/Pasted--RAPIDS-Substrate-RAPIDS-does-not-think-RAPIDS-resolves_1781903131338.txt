@@ -1,0 +1,147 @@
+# RAPIDS Substrate
+
+**RAPIDS does not think. RAPIDS resolves structure at speed.**
+
+This is a field, not a structure. It sits beneath the seed kernel — not
+inside it as a sequential layer. It is called before the cognitive pipeline
+fires. HERMES carries the resolved structure as grounded evidence.
+
+---
+
+## Architecture position
+
+```
+Operator Inquiry
+      │
+      ▼
+RAPIDS SUBSTRATE ◄── called first, pre-resolution pass
+      │               returns structural signatures
+      ▼
+HERMES ingests resolved structure as evidence document
+      │
+      ▼
+Seed Kernel — thread passes through all eight shapes
+  AETHER → HERMES → SIMON → JEMMA → DELTA → OCTAGON → CRYSTAL BRIDGE
+      │
+      ▼
+Compiled Cognition — output thread
+```
+
+---
+
+## What was corrected from the initial spec
+
+1. **cuML DBSCAN** — now runs on a numeric feature matrix built from scalar
+   observational parameters, compared against a reference population of known
+   object classes. String key/value frames cannot be clustered.
+
+2. **Lazy GPU import** — `cudf` is never imported at module level. `/health`
+   always responds. GPU detection happens inside `probe_gpu()` at startup,
+   catching `ImportError` and CUDA device errors separately.
+
+3. **`gpu_confirmed`** — set `True` only after a real CUDA operation returns
+   without error. `gpu_anomaly or gpu_topology` — at least one must succeed.
+
+4. **Balmer values** — `flux_h_alpha` and `flux_h_beta` are line flux
+   intensities in erg/s/cm²/Å. The Balmer ratio is flux(Hα)/flux(Hβ).
+   These are not wavelengths. For SA-2026-0041: ratio observed = 8.2,
+   Case B expected = 2.86, deviation = 187%, flag = BREACH.
+
+5. **Graph density** — undirected: `2E / V(V-1)`. Directed: `E / V(V-1)`.
+   Previous formula `E / E(E-1)` was dimensionally wrong.
+
+---
+
+## Requirements
+
+- NVIDIA Volta or higher GPU (compute capability 7.0+)
+- CUDA 12.5+
+- RAPIDS 26.06 (cudf, cuml, cugraph)
+- Python 3.12
+- FastAPI, uvicorn, pydantic, networkx (CPU fallback)
+
+## Install
+
+```bash
+# GPU (via conda — recommended)
+conda create -n rapids-substrate -c rapidsai -c conda-forge \
+    rapids=26.06 python=3.12 cuda-version=12.5 \
+    fastapi uvicorn pydantic networkx
+
+# Or via Docker (GPU)
+docker build -t rapids-substrate:1.0.0 .
+docker run --gpus all -p 8001:8001 rapids-substrate:1.0.0
+
+# CPU-only (no GPU — substrate still runs, gpu_confirmed always false)
+pip install fastapi uvicorn pydantic networkx
+uvicorn main:app --host 0.0.0.0 --port 8001
+```
+
+## Endpoints
+
+```
+GET  /health   — always responds, reports gpu_available honestly
+POST /resolve  — resolves structure, returns ThreadOutput
+```
+
+## Example call (SA-2026-0041)
+
+```bash
+curl -X POST http://localhost:8001/resolve \
+  -H "Content-Type: application/json" \
+  -d '{
+    "domain": "SPECTRA7",
+    "case_id": "SA-2026-0041",
+    "resolution_mode": "FULL",
+    "observation": {
+      "flux_h_alpha": 8.2,
+      "flux_h_beta":  1.0,
+      "peak_wavelength_nm": 656.8,
+      "rest_wavelength_nm": 656.28,
+      "fwhm_kms": 180,
+      "expected_fwhm_kms": 20,
+      "profile_asymmetry": 0.8,
+      "ratio_h_alpha_nii": 3.1,
+      "he_ii_4686_present": 1,
+      "balmer_series_complete": 0,
+      "temporal_variability_days": 6.2,
+      "blue_absorption_velocity": 500,
+      "x_ray_association": 1,
+      "radio_flux_mjy": 0
+    }
+  }'
+```
+
+Expected response (GPU environment — `gpu_confirmed: true` only on real CUDA device):
+```json
+{
+  "balmer_resolution": {
+    "ratio_observed": 8.2,
+    "ratio_case_b": 2.86,
+    "deviation_pct": 186.71,
+    "excess_factor": 2.867,
+    "flag": "BREACH"
+  },
+  "gpu_confirmed": true,
+  "velocity_ms": 14.3
+}
+```
+
+Expected response (CPU / local dev — `gpu_confirmed: false`, NetworkX fallback for topology):
+```json
+{
+  "balmer_resolution": {
+    "ratio_observed": 8.2,
+    "ratio_case_b": 2.86,
+    "deviation_pct": 186.71,
+    "excess_factor": 2.867,
+    "flag": "BREACH"
+  },
+  "anomaly_result": {
+    "classification": "GPU_UNAVAILABLE",
+    "error": "cuML not installed — RAPIDS substrate requires NVIDIA GPU with CUDA 12+"
+  },
+  "gpu_confirmed": false,
+  "velocity_ms": 2.1
+}
+```

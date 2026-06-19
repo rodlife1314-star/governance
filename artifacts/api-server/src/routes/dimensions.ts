@@ -700,6 +700,168 @@ const XAG_FEED_DEFS: FeedDef[] = [
   },
 ];
 
+// ── ASTROPHYSICS domain feeds ─────────────────────────────────────────────────
+// Real outbound calls to public space-agency APIs — no auth required
+
+const ASTROPHYSICS_FEED_DEFS: FeedDef[] = [
+  {
+    id: "solar_flux",
+    name: "Solar Flux Index F10.7",
+    authority: "NOAA Space Weather Prediction Center",
+    authorityUrl: "https://www.swpc.noaa.gov/",
+    definitionAuthority: "NOAA / IPS Radio & Space Services",
+    definitionUrl: "https://www.swpc.noaa.gov/phenomena/f107-cm-radio-emissions",
+    refreshMs: 3_600_000,
+    valueUnit: "sfu",
+    context: "The 10.7cm solar radio flux (F10.7) is the primary proxy for solar activity intensity. Values >150 sfu indicate heightened solar activity with elevated radiation risk for cislunar missions. Directly relevant to deep-space mission radiation exposure planning and launch window selection.",
+    fetch: async () => {
+      const res = await fetch(
+        "https://services.swpc.noaa.gov/json/solar-cycle/observed-solar-cycle-indices.json",
+        { signal: AbortSignal.timeout(8000), headers: { Accept: "application/json" } }
+      );
+      if (!res.ok) throw new Error(`NOAA SWPC HTTP ${res.status}`);
+      const data = await res.json() as Array<{ "time-tag": string; "f10.7": number; ssn: number }>;
+      const latest = data[data.length - 1];
+      const flux = latest?.["f10.7"] ?? 0;
+      const ssn = latest?.ssn ?? 0;
+      const period = latest?.["time-tag"] ?? "unknown";
+      const level = flux > 200 ? "EXTREME" : flux > 150 ? "HIGH" : flux > 100 ? "MODERATE" : "LOW";
+      return {
+        value: flux,
+        valueLabel: `F10.7=${flux.toFixed(1)} sfu · SSN=${Math.round(ssn)} · ${level} · ${period}`,
+        dataTimestamp: new Date().toISOString(),
+      };
+    },
+  },
+  {
+    id: "solar_wind",
+    name: "Solar Wind / ACE Real-Time",
+    authority: "NOAA Space Weather Prediction Center",
+    authorityUrl: "https://www.swpc.noaa.gov/products/real-time-solar-wind",
+    definitionAuthority: "NASA / NOAA ACE Satellite",
+    definitionUrl: "https://www.swpc.noaa.gov/products/ace-real-time-solar-wind",
+    refreshMs: 60_000,
+    valueUnit: "km/s",
+    context: "Real-time solar wind proton speed from ACE satellite at L1 Lagrange point, ~1.5M km sunward. High-speed streams (>600 km/s) trigger geomagnetic storms and elevate cislunar radiation flux. Critical environmental input for mission launch windows and EVA planning.",
+    fetch: async () => {
+      const res = await fetch(
+        "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json",
+        { signal: AbortSignal.timeout(8000), headers: { Accept: "application/json" } }
+      );
+      if (!res.ok) throw new Error(`NOAA solar wind HTTP ${res.status}`);
+      const data = await res.json() as Array<{ time_tag: string; proton_speed: number; proton_density: number }>;
+      const latest = data[data.length - 1];
+      const speed = latest?.proton_speed ?? 0;
+      const density = latest?.proton_density ?? 0;
+      const ts = latest?.time_tag ?? new Date().toISOString();
+      const condition = speed > 600 ? "STORM WATCH" : speed > 450 ? "ELEVATED" : "NOMINAL";
+      return {
+        value: speed,
+        valueLabel: `${speed.toFixed(0)} km/s · ρ=${density.toFixed(2)} p/cm³ · ${condition}`,
+        dataTimestamp: ts,
+      };
+    },
+  },
+  {
+    id: "iss_state",
+    name: "ISS Live Orbital State",
+    authority: "Where The ISS At API",
+    authorityUrl: "https://wheretheiss.at/",
+    definitionAuthority: "NASA / Roscosmos ISS Operations",
+    definitionUrl: "https://www.nasa.gov/international-space-station/",
+    refreshMs: 30_000,
+    valueUnit: "km alt",
+    context: "Real-time ISS orbital position from TLE propagation. Reference baseline for LEO conditions: radiation belt crossings, orbital decay rate, and rendezvous window calculations. Altitude nominally maintained at 408–410 km through periodic reboost burns.",
+    fetch: async () => {
+      const res = await fetch(
+        "https://api.wheretheiss.at/v1/satellites/25544",
+        { signal: AbortSignal.timeout(8000), headers: { Accept: "application/json" } }
+      );
+      if (!res.ok) throw new Error(`WTIA API HTTP ${res.status}`);
+      const d = await res.json() as { latitude: number; longitude: number; altitude: number; velocity: number; visibility: string };
+      const vis = (d.visibility ?? "unknown").toUpperCase();
+      return {
+        value: d.altitude,
+        valueLabel: `Alt ${d.altitude.toFixed(1)} km · ${d.velocity.toFixed(0)} km/h · ${d.latitude.toFixed(2)}°, ${d.longitude.toFixed(2)}° · ${vis}`,
+        dataTimestamp: new Date().toISOString(),
+      };
+    },
+  },
+  {
+    id: "neo_count",
+    name: "Near-Earth Objects / NASA NEO",
+    authority: "NASA Center for Near Earth Object Studies",
+    authorityUrl: "https://cneos.jpl.nasa.gov/",
+    definitionAuthority: "NASA JPL / CNEOS",
+    definitionUrl: "https://api.nasa.gov/neo/rest/v1/feed",
+    refreshMs: 3_600_000,
+    valueUnit: "objects",
+    context: "Today's near-Earth asteroid count and closest approach distance from NASA NeoWs API. Potentially Hazardous Asteroids (PHA) are within 0.05 AU with diameter >140m. Space situational awareness context for mission planning and debris environment assessment.",
+    fetch: async () => {
+      const today = new Date().toISOString().slice(0, 10);
+      const res = await fetch(
+        `https://api.nasa.gov/neo/rest/v1/feed?start_date=${today}&end_date=${today}&api_key=DEMO_KEY`,
+        { signal: AbortSignal.timeout(10000), headers: { Accept: "application/json" } }
+      );
+      if (!res.ok) throw new Error(`NASA NEO HTTP ${res.status}`);
+      const data = await res.json() as {
+        element_count: number;
+        near_earth_objects: Record<string, Array<{
+          is_potentially_hazardous_asteroid: boolean;
+          close_approach_data: Array<{ miss_distance: { kilometers: string } }>;
+        }>>;
+      };
+      const count = data.element_count ?? 0;
+      const todayObjs = data.near_earth_objects[today] ?? [];
+      const hazardous = todayObjs.filter(o => o.is_potentially_hazardous_asteroid).length;
+      const minMissKm = todayObjs.reduce((min, o) => {
+        const km = parseFloat(o.close_approach_data[0]?.miss_distance?.kilometers ?? "999999999");
+        return km < min ? km : min;
+      }, Infinity);
+      const missLabel = isFinite(minMissKm) ? `closest ${(minMissKm / 1_000_000).toFixed(2)}M km` : "no approaches";
+      return {
+        value: count,
+        valueLabel: `${count} objects today · ${hazardous} PHA · ${missLabel}`,
+        dataTimestamp: new Date().toISOString(),
+      };
+    },
+  },
+  {
+    id: "lunar_state",
+    name: "Lunar Distance / JPL Horizons",
+    authority: "NASA Jet Propulsion Laboratory",
+    authorityUrl: "https://ssd.jpl.nasa.gov/",
+    definitionAuthority: "NASA JPL Horizons System",
+    definitionUrl: "https://ssd.jpl.nasa.gov/horizons/",
+    refreshMs: 3_600_000,
+    valueUnit: "km",
+    context: "Real-time lunar distance via JPL Horizons ephemeris. Earth–Moon distance varies 356,500–406,700 km per synodic cycle; closer Moon reduces trans-lunar injection ΔV requirement. Critical for Artemis launch window planning and lunar orbit insertion fuel budgets.",
+    fetch: async () => {
+      const today = new Date().toISOString().slice(0, 10);
+      const tomorrow = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
+      const url = `https://ssd.jpl.nasa.gov/api/horizons.api?format=json&COMMAND='301'&OBJ_DATA='NO'&MAKE_EPHEM='YES'&EPHEM_TYPE='OBSERVER'&CENTER='500@399'&START_TIME='${today}'&STOP_TIME='${tomorrow}'&STEP_SIZE='1%20d'&QUANTITIES='20'`;
+      const res = await fetch(url, { signal: AbortSignal.timeout(12000) });
+      if (!res.ok) throw new Error(`JPL Horizons HTTP ${res.status}`);
+      const data = await res.json() as { result: string };
+      const text = data.result ?? "";
+      const soe = text.indexOf("$$SOE");
+      const eoe = text.indexOf("$$EOE");
+      if (soe < 0) throw new Error("JPL Horizons: no $$SOE data marker");
+      const dataLine = text.slice(soe + 5, eoe).trim().split("\n")[0] ?? "";
+      const nums = dataLine.match(/\b(0\.00[0-9]\d*)\b/g) ?? [];
+      const distAU = nums.map(parseFloat).find(v => v > 0.001 && v < 0.01);
+      if (!distAU) throw new Error("JPL Horizons: could not parse lunar range");
+      const distKm = distAU * 149_597_870.7;
+      const phase = distKm < 370_000 ? "APPROACHING PERIGEE" : distKm > 400_000 ? "NEAR APOGEE" : "MID-ORBIT";
+      return {
+        value: Math.round(distKm),
+        valueLabel: `${Math.round(distKm / 1000)}k km · ${phase} · JPL Horizons`,
+        dataTimestamp: new Date().toISOString(),
+      };
+    },
+  },
+];
+
 // ── Asset feed def map ────────────────────────────────────────────────────────
 
 const ASSET_FEED_DEFS: Record<string, FeedDef[]> = {
@@ -789,13 +951,26 @@ export async function fetchAllFeeds(asset = "BTC"): Promise<FeedRecord[]> {
   return Promise.all(getAssetFeedDefs(asset).map((def) => fetchFeed(def, asset)));
 }
 
+export async function fetchAllAstrophysicsFeeds(): Promise<FeedRecord[]> {
+  return Promise.all(ASTROPHYSICS_FEED_DEFS.map((def) => fetchFeed(def, "ASTROPHYSICS")));
+}
+
 // ── Route ─────────────────────────────────────────────────────────────────────
 
 router.get("/dimensions/feeds", async (req, res) => {
-  const asset = String(req.query.asset || "BTC").toUpperCase();
+  const domain = String(req.query.domain || "").toUpperCase();
+  const asset  = String(req.query.asset  || "BTC").toUpperCase();
   try {
-    const feeds = await fetchAllFeeds(asset);
-    res.json({ success: true, feeds, asset, fetchedAt: Date.now() });
+    let feeds: FeedRecord[];
+    let resolvedKey: string;
+    if (domain === "ASTROPHYSICS") {
+      feeds = await fetchAllAstrophysicsFeeds();
+      resolvedKey = "ASTROPHYSICS";
+    } else {
+      feeds = await fetchAllFeeds(asset);
+      resolvedKey = asset;
+    }
+    res.json({ success: true, feeds, asset: resolvedKey, fetchedAt: Date.now() });
   } catch (err: any) {
     req.log.error(err, "dimensions/feeds aggregation failed");
     res.status(500).json({ success: false, error: "Feed aggregation failed" });

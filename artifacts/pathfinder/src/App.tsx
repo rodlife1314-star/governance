@@ -59,6 +59,13 @@ export default function App() {
   const [hintedDomainId, setHintedDomainId] = useState<DomainId | null>(null);
   const hintedDomainApiRef = useRef<string | null>(null);
 
+  // SPECTRA-7 context — only populated after AETHER resolves and domain is confirmed
+  const [spectraContext, setSpectraContext] = useState<{
+    observation: string;
+    domain: string;
+    subDomain?: string;
+  } | null>(null);
+
   // ── Field mode state ───────────────────────────────────────────────────────
   const [mode, setMode] = useState<Mode>("augment");
   const [selectedAsset, setSelectedAsset] = useState<AssetId>("BTC");
@@ -412,46 +419,16 @@ export default function App() {
   return (
     <div className="h-screen flex flex-col bg-[#07080B] text-white overflow-hidden" id="pathfinder-augment">
 
-      {/* ── SPECTRA-7: Routed specialty — same Doctrine, same Ledger ────────── */}
-      {appState === "spectra" && (
+      {/* ── SPECTRA-7: Domain-gated specialty — only accessible after AETHER classification ── */}
+      {appState === "spectra" && spectraContext && (
         <div className="flex-1 overflow-y-auto">
-          <SpectraView onBack={() => setAppState("aperture")} />
+          <SpectraView
+            observation={spectraContext.observation}
+            domain={spectraContext.domain}
+            subDomain={spectraContext.subDomain}
+            onBack={() => setAppState("result")}
+          />
         </div>
-      )}
-
-      {/* ── SPECTRA-7 entry point — visible on aperture screen ───────────────── */}
-      {appState === "aperture" && (
-        <button
-          onClick={() => setAppState("spectra")}
-          style={{
-            position: "fixed",
-            top: "16px",
-            right: "16px",
-            zIndex: 50,
-            background: "rgba(232, 64, 90, 0.06)",
-            border: "1px solid rgba(232, 64, 90, 0.25)",
-            borderRadius: "4px",
-            color: "rgba(232, 64, 90, 0.7)",
-            fontFamily: "'Space Mono', monospace",
-            fontSize: "9px",
-            letterSpacing: "0.18em",
-            padding: "7px 12px",
-            cursor: "pointer",
-            transition: "all 0.2s ease",
-          }}
-          onMouseEnter={e => {
-            (e.currentTarget as HTMLButtonElement).style.background = "rgba(232, 64, 90, 0.12)";
-            (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(232, 64, 90, 0.5)";
-            (e.currentTarget as HTMLButtonElement).style.color = "#e8405a";
-          }}
-          onMouseLeave={e => {
-            (e.currentTarget as HTMLButtonElement).style.background = "rgba(232, 64, 90, 0.06)";
-            (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(232, 64, 90, 0.25)";
-            (e.currentTarget as HTMLButtonElement).style.color = "rgba(232, 64, 90, 0.7)";
-          }}
-        >
-          SPECTRA-7 ↗
-        </button>
       )}
 
       {appState !== "spectra" && <AnimatePresence mode="wait">
@@ -518,6 +495,7 @@ export default function App() {
             onNewObservation={() => {
               setObservationAnalysis(null);
               setAetherPacket(null);
+              setSpectraContext(null);
               hintedDomainApiRef.current = null;
               setHintedDomainId(null);
               setAppState("aperture");
@@ -525,6 +503,14 @@ export default function App() {
             onSeal={handleObservationSeal}
             sealing={sealing}
             sealedFlash={sealedFlash}
+            onLaunchSpectra={() => {
+              setSpectraContext({
+                observation: rawObservation,
+                domain: observationAnalysis.inferredDomain,
+                subDomain: aetherPacket?.subDomain ?? undefined,
+              });
+              setAppState("spectra");
+            }}
           />
         )}
 
@@ -568,15 +554,10 @@ export default function App() {
                       <DomainStandby
                         key={selectedDomain}
                         domain={getDomain(selectedDomain)}
-                        observeLabel={selectedDomain === "ASTROPHYSICS" ? "ENTER SPECTRA-7 →" : undefined}
                         onObserve={() => {
-                          if (selectedDomain === "ASTROPHYSICS") {
-                            setAppState("spectra");
-                          } else {
-                            hintedDomainApiRef.current = DOMAIN_API_MAP[selectedDomain];
-                            setHintedDomainId(selectedDomain);
-                            setAppState("aperture");
-                          }
+                          hintedDomainApiRef.current = DOMAIN_API_MAP[selectedDomain];
+                          setHintedDomainId(selectedDomain);
+                          setAppState("aperture");
                         }}
                       />
                     ) : (
