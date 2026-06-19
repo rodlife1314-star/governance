@@ -21,8 +21,14 @@
     box-sizing: border-box;
   }
 
-  html,
+  html {
+    height: 100%;
+    /* Prevent iOS rubber-band scroll on the root */
+    overscroll-behavior: none;
+  }
+
   body {
+    height: 100%;
     margin: 0;
     padding: 0;
     background-color: #0A0B0E;
@@ -32,6 +38,20 @@
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* Prevent iOS overscroll bounce at body level */
+    overscroll-behavior: none;
+  }
+
+  /* Smooth momentum scrolling on iOS for all scroll containers */
+  .overflow-y-auto,
+  .overflow-y-scroll {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Prevent text size adjustment on orientation change (iOS) */
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
 
   ::-webkit-scrollbar {

@@ -65,7 +65,7 @@ export default function RapidsAperture({ dimensions, loading, rapidsCompression 
   const refRings = [0.25, 0.5, 0.75, 1.0];
 
   return (
-    <div className="flex flex-col items-center justify-center h-full bg-[#07080B] px-2 py-4 md:px-4 md:py-6 relative" id="rapids-aperture">
+    <div className="flex flex-col items-center justify-center min-h-full bg-[#07080B] px-2 py-4 md:px-4 md:py-6 relative" id="rapids-aperture">
       {/* Title */}
       <div className="absolute top-3 left-0 right-0 flex items-center justify-center">
         <span className="text-[8px] font-mono tracking-[0.3em] text-[#5A6575] uppercase">RAPIDS LENS</span>

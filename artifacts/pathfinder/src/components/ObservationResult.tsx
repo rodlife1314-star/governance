@@ -140,8 +140,8 @@ export default function ObservationResult({
           />
         </div>
 
-        {/* Mobile: single panel */}
-        <div className="md:hidden flex-1 overflow-hidden">
+        {/* Mobile: single panel — overflow-y-auto lets inner panels scroll */}
+        <div className="md:hidden flex-1 overflow-y-auto min-h-0">
           {augTab === "field" && (
             <RapidsAperture
               dimensions={analysis.dimensions}

@@ -122,8 +122,9 @@ export default function ObservationAperture({ onSubmit, onFieldMode, domain }: O
         </button>
       </div>
 
-      {/* Center content */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
+      {/* Center content — scrollable so keyboard open on mobile doesn't clip textarea */}
+      <div className="flex-1 overflow-y-auto min-h-0">
+        <div className="flex flex-col items-center justify-center min-h-full px-6 py-10">
         <div className="w-full max-w-2xl">
 
           {/* The question */}
@@ -227,6 +228,7 @@ export default function ObservationAperture({ onSubmit, onFieldMode, domain }: O
               ))}
             </div>
           </motion.div>
+        </div>
         </div>
       </div>
 

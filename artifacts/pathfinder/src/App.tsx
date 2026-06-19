@@ -417,7 +417,7 @@ export default function App() {
   );
 
   return (
-    <div className="h-screen flex flex-col bg-[#07080B] text-white overflow-hidden" id="pathfinder-augment">
+    <div className="h-dvh flex flex-col bg-[#07080B] text-white overflow-hidden" id="pathfinder-augment">
 
       {/* ── SPECTRA-7: Domain-gated specialty — only accessible after AETHER classification ── */}
       {appState === "spectra" && spectraContext && (
