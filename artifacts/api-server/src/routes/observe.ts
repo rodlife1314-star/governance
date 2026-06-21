@@ -1,27 +1,17 @@
 import { Router } from "express";
-import { ai } from "@workspace/integrations-gemini-ai";
 import { db, domainAuthorities, dataSources } from "@workspace/db";
 import { eq, asc } from "drizzle-orm";
+import { getRapidsAdapter } from "../lib/inferenceAdapter.js";
 
 const router = Router();
-const MODEL = "gemini-2.5-flash";
 
-async function callGemini(prompt: string): Promise<string> {
-  const response = await ai.models.generateContent({
-    model: MODEL,
-    contents: [{ role: "user", parts: [{ text: prompt }] }],
-    config: {
-      systemInstruction: [
-        "You are RAPIDS. Return only valid JSON. No markdown fences. No explanation outside the JSON.",
-        "CRITICAL — DATA INTEGRITY RULE: Do not fabricate, estimate, infer, or substitute any quantitative value (prices, percentages, statistics, rates, measurements, counts).",
-        "If the operator's observation references a quantity, analyze it exactly as stated — never correct, adjust, or embellish it.",
-        "If data would be needed to complete an analysis but is not present in the observation, note the gap explicitly in the signal text rather than guessing.",
-        "Reality comes first. Silence is preferable to fabrication.",
-      ].join(" "),
-    },
-  });
-  return response.text ?? "";
-}
+const RAPIDS_SYSTEM = [
+  "You are RAPIDS. Return only valid JSON. No markdown fences. No explanation outside the JSON.",
+  "CRITICAL — DATA INTEGRITY RULE: Do not fabricate, estimate, infer, or substitute any quantitative value (prices, percentages, statistics, rates, measurements, counts).",
+  "If the operator's observation references a quantity, analyze it exactly as stated — never correct, adjust, or embellish it.",
+  "If data would be needed to complete an analysis but is not present in the observation, note the gap explicitly in the signal text rather than guessing.",
+  "Reality comes first. Silence is preferable to fabrication.",
+].join(" ");
 
 function buildObservationPrompt(observation: string, domainHint?: string): string {
   const domainAnchor = domainHint
@@ -301,11 +291,12 @@ router.post("/observe", async (req, res) => {
 
   try {
     const prompt = buildObservationPrompt(trimmed, domainOverride);
-    const raw = await callGemini(prompt);
-    const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+    const adapter = getRapidsAdapter();
+    const result = await adapter.invoke(prompt, RAPIDS_SYSTEM);
+    const cleaned = result.content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     const parsed = JSON.parse(cleaned);
 
-    res.json({ success: true, rawObservation: trimmed, ...parsed });
+    res.json({ success: true, rawObservation: trimmed, engine: adapter.name, ...parsed });
   } catch (err: any) {
     req.log.error(err, "observe analysis failed");
     res.json({ success: true, rawObservation: trimmed, ...buildFallback(trimmed) });

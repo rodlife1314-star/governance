@@ -71,6 +71,9 @@ export default function SpectraView({ observation, domain, subDomain, onBack }: 
   const [panelTitle, setPanelTitle] = useState("");
   const [error, setError] = useState("");
   const [sealed, setSealed] = useState(false);
+  const [thinkingTrace, setThinkingTrace] = useState("");
+  const [thinkingOpen, setThinkingOpen] = useState(false);
+  const [engine, setEngine] = useState<"gemini" | "nvidia">("nvidia");
 
   useEffect(() => {
     let cancelled = false;
@@ -102,6 +105,8 @@ export default function SpectraView({ observation, domain, subDomain, onBack }: 
     setVerdict("");
     setError("");
     setSealed(false);
+    setThinkingTrace("");
+    setThinkingOpen(false);
   }
 
   async function runInvestigation() {
@@ -134,6 +139,10 @@ export default function SpectraView({ observation, domain, subDomain, onBack }: 
       setPanelTitle(data.title || "");
       setReasoning(data.analysis || "");
       setVerdict(data.verdict || "");
+      if (data.thinkingTrace) {
+        setThinkingTrace(data.thinkingTrace);
+        setEngine(data.engine === "nvidia" ? "nvidia" : "gemini");
+      }
 
       await sealToSovereignLedger(hyp.name, domain, data.analysis || "", data.verdict || "", generatedCase.caseId);
       setSealed(true);
@@ -164,7 +173,7 @@ export default function SpectraView({ observation, domain, subDomain, onBack }: 
         </div>
 
         <div className="s7-doctrine-badge">
-          ⬡ ROUTING DOCTRINE ACTIVE · DIMENSIONAL ENGINE · SOVEREIGN LEDGER
+          ⬡ ROUTING DOCTRINE ACTIVE · {engine === "nvidia" ? "NEMOTRON-550B · REASONING ENGINE" : "DIMENSIONAL ENGINE"} · SOVEREIGN LEDGER
         </div>
 
         {/* GENERATING STATE */}
@@ -275,6 +284,25 @@ export default function SpectraView({ observation, domain, subDomain, onBack }: 
               <div className="s7-verdict-title">OPERATOR VERDICT</div>
               <div>{verdict}</div>
             </div>
+
+            {/* NEMOTRON REASONING TRACE */}
+            {thinkingTrace && (
+              <div className="s7-thinking-wrap">
+                <button
+                  className="s7-thinking-toggle"
+                  onClick={() => setThinkingOpen(o => !o)}
+                >
+                  <span className="s7-thinking-icon">{thinkingOpen ? "▾" : "▸"}</span>
+                  NEMOTRON CHAIN OF THOUGHT
+                  <span className="s7-thinking-tokens">{thinkingTrace.length.toLocaleString()} chars</span>
+                </button>
+                {thinkingOpen && (
+                  <div className="s7-thinking-body">
+                    {thinkingTrace}
+                  </div>
+                )}
+              </div>
+            )}
 
             {sealed && (
               <div className="s7-sealed-badge">
@@ -653,5 +681,59 @@ const S7_CSS = `
     letter-spacing: 0.18em;
     color: rgba(76,175,135,0.6);
     margin-bottom: 10px;
+  }
+
+  .s7-thinking-wrap {
+    margin-bottom: 16px;
+    border: 1px solid rgba(251,191,36,0.15);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .s7-thinking-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    background: rgba(251,191,36,0.04);
+    border: none;
+    cursor: pointer;
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.16em;
+    color: rgba(251,191,36,0.55);
+    text-align: left;
+    transition: background 0.2s ease;
+  }
+  .s7-thinking-toggle:hover {
+    background: rgba(251,191,36,0.07);
+    color: rgba(251,191,36,0.75);
+  }
+
+  .s7-thinking-icon {
+    font-size: 10px;
+    flex-shrink: 0;
+  }
+
+  .s7-thinking-tokens {
+    margin-left: auto;
+    font-size: 8px;
+    color: rgba(251,191,36,0.3);
+    letter-spacing: 0.1em;
+  }
+
+  .s7-thinking-body {
+    padding: 16px;
+    background: rgba(251,191,36,0.02);
+    border-top: 1px solid rgba(251,191,36,0.1);
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: rgba(251,191,36,0.4);
+    line-height: 1.8;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 500px;
+    overflow-y: auto;
   }
 `;
