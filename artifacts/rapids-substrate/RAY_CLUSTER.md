@@ -23,8 +23,8 @@ nvidia-smi
 # Python 3.11 or 3.12
 python --version
 
-# Ray with dashboard
-pip install "ray[default]>=2.40.0"
+# Ray — cgraph extra is required for pipeline parallelism (--pipeline-parallel-size > 1)
+uv pip install "ray[cgraph]>=2.40.0"
 
 # GPU acceleration — install via conda (recommended) or pip
 conda install -c rapidsai -c conda-forge \
@@ -32,8 +32,9 @@ conda install -c rapidsai -c conda-forge \
   cupy-cuda12x python=3.12 cuda-version=12.0
 
 # Inference engine — pick one (or both)
-pip install vllm          # vLLM
-pip install sglang        # SGLang
+# Recommended container: vllm/vllm-openai:v0.22.0
+uv pip install vllm          # vLLM
+uv pip install sglang        # SGLang
 ```
 
 > **Nemotron-550B NVFP4 sizing note**: The `NVFP4` checkpoint uses 4-bit quantization (~0.5 bytes/param), reducing the full weight footprint to ~275 GB — roughly **4× smaller than BF16** (1.1 TB). The MoE active-parameter footprint is ~27 GB, but all expert weights must be resident. Practical minimum: **4× H100-80GB** (TP=4, 320 GB total). For the BF16/FP8 checkpoint, 8× H100 is required.
@@ -130,6 +131,29 @@ vllm serve $MODEL_CKPT \
 | `--distributed-timeout-seconds` | `3600` | *(absent)* | Generous timeout for multi-node barrier synchronisation |
 
 The API is served at `http://<head_node_ip>:8001/v1`.
+
+**Extending to 1M context:** The default is 256K. To unlock the full 1M context window:
+
+```bash
+export VLLM_ALLOW_LONG_MAX_MODEL_LEN=1
+export VLLM_MAX_MODEL_LEN=1048576
+./scripts/ray-cluster-setup.sh vllm
+```
+
+> Note: 1M context increases KV cache pressure significantly. Ensure `--kv-cache-dtype fp8` and `--gpu-memory-utilization 0.90` are set (both are defaults in the script).
+
+**FlashInfer performance tuning:** Set these env vars before `vllm serve` to select the MoE and allreduce kernel backends:
+
+```bash
+# Allreduce — TRT-LLM fused kernel (faster than NCCL for small messages)
+export VLLM_FLASHINFER_ALLREDUCE_BACKEND=trtllm
+
+# MoE kernel — pick one:
+export VLLM_FLASHINFER_MOE_BACKEND=latency      # TRTLLM-Gen: lower latency, best for interactive / single-request
+export VLLM_FLASHINFER_MOE_BACKEND=throughput   # CUTLASS: higher throughput, best for batched server workloads
+```
+
+The script reads all three env vars and exports them automatically before launching `vllm serve`.
 
 ### Option B — SGLang
 
@@ -271,7 +295,10 @@ NVIDIA_MODEL_NAME=nvidia/nemotron-3-ultra
 | `VLLM_QUANTIZATION` | `auto` | `auto` \| `fp4` \| `nvfp4` — explicit override if auto-detect fails |
 | `VLLM_DIST_TIMEOUT` | `3600` | `--distributed-timeout-seconds` for cross-node barrier sync |
 | `VLLM_PORT` | `8001` | vLLM OpenAI-compatible API port |
-| `VLLM_MAX_MODEL_LEN` | `262144` | Maximum sequence length (256K context) |
+| `VLLM_MAX_MODEL_LEN` | `262144` | Max sequence length — set to `1048576` for 1M context |
+| `VLLM_ALLOW_LONG_MAX_MODEL_LEN` | `0` | Set to `1` to unlock context lengths above 256K |
+| `VLLM_FLASHINFER_ALLREDUCE_BACKEND` | *(unset)* | `trtllm` — TRT-LLM fused allreduce kernel (faster than NCCL) |
+| `VLLM_FLASHINFER_MOE_BACKEND` | *(unset)* | `latency` (TRTLLM-Gen, interactive) or `throughput` (CUTLASS, batched) |
 | `SGLANG_MODEL` | *(same as VLLM_MODEL)* | Model for SGLang |
 | `SGLANG_TENSOR_PARALLEL` | *(same as VLLM_TENSOR_PARALLEL)* | GPU count for SGLang |
 | `SGLANG_PORT` | `8002` | SGLang API port |

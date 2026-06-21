@@ -37,10 +37,17 @@ VLLM_MODEL="${VLLM_MODEL:-nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-NVFP4}"
 VLLM_TENSOR_PARALLEL="${VLLM_TENSOR_PARALLEL:-4}"
 VLLM_PIPELINE_PARALLEL="${VLLM_PIPELINE_PARALLEL:-2}"
 VLLM_PORT="${VLLM_PORT:-8001}"
-VLLM_MAX_MODEL_LEN="${VLLM_MAX_MODEL_LEN:-262144}"
+VLLM_MAX_MODEL_LEN="${VLLM_MAX_MODEL_LEN:-262144}"   # set to 1048576 for 1M context
+VLLM_ALLOW_LONG_MAX_MODEL_LEN="${VLLM_ALLOW_LONG_MAX_MODEL_LEN:-0}"
 VLLM_MAX_NUM_SEQS="${VLLM_MAX_NUM_SEQS:-256}"
 VLLM_QUANTIZATION="${VLLM_QUANTIZATION:-auto}"
 VLLM_DIST_TIMEOUT="${VLLM_DIST_TIMEOUT:-3600}"
+
+# FlashInfer kernel backends — unset = vLLM default
+# VLLM_FLASHINFER_ALLREDUCE_BACKEND: trtllm (recommended) or unset
+# VLLM_FLASHINFER_MOE_BACKEND: latency (TRTLLM-Gen, interactive) or throughput (CUTLASS, batched)
+VLLM_FLASHINFER_ALLREDUCE_BACKEND="${VLLM_FLASHINFER_ALLREDUCE_BACKEND:-}"
+VLLM_FLASHINFER_MOE_BACKEND="${VLLM_FLASHINFER_MOE_BACKEND:-}"
 
 SGLANG_MODEL="${SGLANG_MODEL:-${VLLM_MODEL}}"
 SGLANG_PORT="${SGLANG_PORT:-8002}"
@@ -105,10 +112,12 @@ cmd_vllm() {
   log "Model:               ${VLLM_MODEL}"
   log "Tensor parallel:     ${VLLM_TENSOR_PARALLEL}"
   log "Pipeline parallel:   ${VLLM_PIPELINE_PARALLEL}  (total GPUs: ${TOTAL_GPUS})"
-  log "Max model len:       ${VLLM_MAX_MODEL_LEN}"
+  log "Max model len:       ${VLLM_MAX_MODEL_LEN}${VLLM_ALLOW_LONG_MAX_MODEL_LEN:+  (long context unlocked)}"
   log "Max seqs:            ${VLLM_MAX_NUM_SEQS}"
   log "Dist timeout:        ${VLLM_DIST_TIMEOUT}s"
   log "Serving on port:     ${VLLM_PORT}"
+  [[ -n "${VLLM_FLASHINFER_ALLREDUCE_BACKEND}" ]] && log "FlashInfer allreduce: ${VLLM_FLASHINFER_ALLREDUCE_BACKEND}"
+  [[ -n "${VLLM_FLASHINFER_MOE_BACKEND}" ]]       && log "FlashInfer MoE:       ${VLLM_FLASHINFER_MOE_BACKEND}"
 
   # Quantization override — "auto" lets vLLM detect NVFP4 from model config;
   # set VLLM_QUANTIZATION=fp4 explicitly if auto-detection fails.
@@ -116,6 +125,12 @@ cmd_vllm() {
   if [[ "${VLLM_QUANTIZATION}" != "auto" ]]; then
     QUANT_FLAG=(--quantization "${VLLM_QUANTIZATION}")
   fi
+
+  # Export FlashInfer kernel backend selectors if set (consumed as env vars by vLLM worker)
+  [[ -n "${VLLM_FLASHINFER_ALLREDUCE_BACKEND}" ]] && export VLLM_FLASHINFER_ALLREDUCE_BACKEND
+  [[ -n "${VLLM_FLASHINFER_MOE_BACKEND}" ]]       && export VLLM_FLASHINFER_MOE_BACKEND
+  # 1M context gate — must be set before vllm starts
+  [[ "${VLLM_ALLOW_LONG_MAX_MODEL_LEN}" == "1" ]] && export VLLM_ALLOW_LONG_MAX_MODEL_LEN=1
 
   RAY_ADDRESS="${RAY_HEAD_IP}:${RAY_PORT}" \
   vllm serve "${VLLM_MODEL}" \
