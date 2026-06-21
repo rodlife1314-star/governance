@@ -1,6 +1,10 @@
 import OpenAI from "openai";
 
-const MODEL = "nvidia/nemotron-3-ultra-550b-a55b";
+// Cloud API model ID: nvidia/nemotron-3-ultra-550b-a55b
+// Local vLLM Docker served name: nvidia/nemotron-3-ultra  (set via --served-model-name)
+// Override with NVIDIA_MODEL_NAME env var when targeting local deployment.
+const MODEL =
+  process.env.NVIDIA_MODEL_NAME ?? "nvidia/nemotron-3-ultra-550b-a55b";
 
 function createClient(): OpenAI {
   return new OpenAI({
