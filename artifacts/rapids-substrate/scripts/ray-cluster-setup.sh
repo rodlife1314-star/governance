@@ -35,9 +35,12 @@ RAY_HEAD_IP="${RAY_HEAD_IP:-}"
 
 VLLM_MODEL="${VLLM_MODEL:-nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-NVFP4}"
 VLLM_TENSOR_PARALLEL="${VLLM_TENSOR_PARALLEL:-4}"
+VLLM_PIPELINE_PARALLEL="${VLLM_PIPELINE_PARALLEL:-2}"
 VLLM_PORT="${VLLM_PORT:-8001}"
 VLLM_MAX_MODEL_LEN="${VLLM_MAX_MODEL_LEN:-262144}"
+VLLM_MAX_NUM_SEQS="${VLLM_MAX_NUM_SEQS:-256}"
 VLLM_QUANTIZATION="${VLLM_QUANTIZATION:-auto}"
+VLLM_DIST_TIMEOUT="${VLLM_DIST_TIMEOUT:-3600}"
 
 SGLANG_MODEL="${SGLANG_MODEL:-${VLLM_MODEL}}"
 SGLANG_PORT="${SGLANG_PORT:-8002}"
@@ -91,32 +94,56 @@ cmd_worker() {
 cmd_vllm() {
   require_head_ip
   check_ray
-  if ! command -v vllm &>/dev/null && ! python -c "import vllm" &>/dev/null 2>&1; then
+  if ! command -v vllm &>/dev/null; then
     die "vllm not found. Install with: pip install vllm"
   fi
-  RAY_ADDRESS="${RAY_HEAD_IP}:${RAY_PORT}"
-  log "Launching vLLM server on Ray cluster at ${RAY_ADDRESS}"
-  log "Model:            ${VLLM_MODEL}"
-  log "Tensor parallel:  ${VLLM_TENSOR_PARALLEL}"
-  log "Quantization:     ${VLLM_QUANTIZATION}"
-  log "Max model len:    ${VLLM_MAX_MODEL_LEN}"
-  log "Serving on port:  ${VLLM_PORT}"
 
-  # Build quantization flag — "auto" lets vLLM detect NVFP4 from the model config;
-  # pass --quantization fp4 explicitly if auto-detection fails on your vLLM version.
+  # Total GPUs = TP × PP
+  TOTAL_GPUS=$(( VLLM_TENSOR_PARALLEL * VLLM_PIPELINE_PARALLEL ))
+
+  log "Launching vLLM server on Ray cluster at ${RAY_HEAD_IP}:${RAY_PORT}"
+  log "Model:               ${VLLM_MODEL}"
+  log "Tensor parallel:     ${VLLM_TENSOR_PARALLEL}"
+  log "Pipeline parallel:   ${VLLM_PIPELINE_PARALLEL}  (total GPUs: ${TOTAL_GPUS})"
+  log "Max model len:       ${VLLM_MAX_MODEL_LEN}"
+  log "Max seqs:            ${VLLM_MAX_NUM_SEQS}"
+  log "Dist timeout:        ${VLLM_DIST_TIMEOUT}s"
+  log "Serving on port:     ${VLLM_PORT}"
+
+  # Quantization override — "auto" lets vLLM detect NVFP4 from model config;
+  # set VLLM_QUANTIZATION=fp4 explicitly if auto-detection fails.
   QUANT_FLAG=()
   if [[ "${VLLM_QUANTIZATION}" != "auto" ]]; then
     QUANT_FLAG=(--quantization "${VLLM_QUANTIZATION}")
   fi
 
-  python -m vllm.entrypoints.openai.api_server \
-    --model "${VLLM_MODEL}" \
-    --tensor-parallel-size "${VLLM_TENSOR_PARALLEL}" \
+  RAY_ADDRESS="${RAY_HEAD_IP}:${RAY_PORT}" \
+  vllm serve "${VLLM_MODEL}" \
+    --host 0.0.0.0 \
     --port "${VLLM_PORT}" \
-    --max-model-len "${VLLM_MAX_MODEL_LEN}" \
+    --served-model-name nvidia/nemotron-3-ultra \
+    --tensor-parallel-size "${VLLM_TENSOR_PARALLEL}" \
+    --pipeline-parallel-size "${VLLM_PIPELINE_PARALLEL}" \
+    --distributed-executor-backend ray \
     --trust-remote-code \
-    --dtype auto \
+    --kv-cache-dtype fp8 \
+    --gpu-memory-utilization 0.90 \
+    --max-model-len "${VLLM_MAX_MODEL_LEN}" \
+    --max-num-seqs "${VLLM_MAX_NUM_SEQS}" \
+    --max-num-batched-tokens 32768 \
     --enable-chunked-prefill \
+    --enable-prefix-caching \
+    --reasoning-parser nemotron_v3 \
+    --enable-auto-tool-choice \
+    --tool-call-parser qwen3_coder \
+    --mamba-ssm-cache-dtype float16 \
+    --mamba-backend flashinfer \
+    --enable-mamba-cache-stochastic-rounding \
+    --mamba-cache-philox-rounds 5 \
+    --speculative-config '{"method": "nemotron_h_mtp", "num_speculative_tokens": 5}' \
+    --model-loader-extra-config '{"enable_multithread_load": true, "num_threads": 96}' \
+    --compilation-config '{"pass_config": {"fuse_allreduce_rms": false}}' \
+    --distributed-timeout-seconds "${VLLM_DIST_TIMEOUT}" \
     "${QUANT_FLAG[@]}" \
     ${HF_TOKEN:+--huggingface-token "${HF_TOKEN}"}
 }
@@ -181,9 +208,12 @@ case "${COMMAND}" in
     echo "    RAY_PORT      GCS port (default: 6379)"
     echo ""
     echo "  Optional env (vLLM / SGLang):"
-    echo "    VLLM_MODEL              model ID (default: nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-NVFP4)"
-    echo "    VLLM_TENSOR_PARALLEL    GPU count for tensor parallelism (default: 4)"
+    echo "    VLLM_MODEL              model checkpoint path (default: NVFP4 checkpoint)"
+    echo "    VLLM_TENSOR_PARALLEL    TP size per node (default: 4)"
+    echo "    VLLM_PIPELINE_PARALLEL  PP stages across nodes (default: 2; total GPUs = TP×PP)"
+    echo "    VLLM_MAX_NUM_SEQS       max concurrent sequences (default: 256)"
     echo "    VLLM_QUANTIZATION       auto | fp4 | nvfp4 (default: auto)"
+    echo "    VLLM_DIST_TIMEOUT       distributed timeout in seconds (default: 3600)"
     echo "    VLLM_PORT               API port (default: 8001)"
     echo "    SGLANG_PORT             SGLang API port (default: 8002)"
     echo "    HF_TOKEN                HuggingFace token for gated models"

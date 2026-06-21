@@ -78,29 +78,58 @@ Workers connect, register their GPUs, and block until the cluster shuts down. Ru
 
 ## 3. Launch the Inference Server
 
-### Option A — vLLM (recommended for OpenAI-compatible API)
+### Option A — vLLM on Ray (multi-node, TP×PP = 8 GPUs)
 
-On the head node (or any node with GPU access to the cluster):
+Run on the **Ray head node** after the cluster is up (steps 1–2 complete). Ray is used as the distributed executor — vLLM shards across all registered worker GPUs automatically.
+
+**GPU requirement:** `--tensor-parallel-size 4 × --pipeline-parallel-size 2` = **8× H100-80GB** across the cluster (e.g. 2 nodes × 4 GPUs each).
 
 ```bash
-export RAY_HEAD_IP=<head_node_ip>
-export MODEL_CKPT=nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-NVFP4
-export VLLM_MODEL="${MODEL_CKPT}"
-export VLLM_TENSOR_PARALLEL=4          # 4× H100-80GB minimum for NVFP4
-export VLLM_PORT=8001
-export VLLM_MAX_MODEL_LEN=262144         # 256K context window
-export VLLM_QUANTIZATION=auto          # vLLM detects NVFP4 from model config;
-                                       # set fp4 explicitly if auto-detection fails
-export HF_TOKEN=<your_hf_token>        # required for gated model
+export MODEL_CKPT=/path/to/nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-NVFP4
 
+# Use the script (reads env vars below):
 ./scripts/ray-cluster-setup.sh vllm
+
+# — or run directly:
+vllm serve $MODEL_CKPT \
+  --host 0.0.0.0 \
+  --port 8001 \
+  --served-model-name nvidia/nemotron-3-ultra \
+  --tensor-parallel-size 4 \
+  --pipeline-parallel-size 2 \
+  --distributed-executor-backend ray \
+  --trust-remote-code \
+  --kv-cache-dtype fp8 \
+  --gpu-memory-utilization 0.90 \
+  --max-model-len 262144 \
+  --max-num-seqs 256 \
+  --max-num-batched-tokens 32768 \
+  --enable-chunked-prefill \
+  --enable-prefix-caching \
+  --reasoning-parser nemotron_v3 \
+  --enable-auto-tool-choice \
+  --tool-call-parser qwen3_coder \
+  --mamba-ssm-cache-dtype float16 \
+  --mamba-backend flashinfer \
+  --enable-mamba-cache-stochastic-rounding \
+  --mamba-cache-philox-rounds 5 \
+  --speculative-config '{"method": "nemotron_h_mtp", "num_speculative_tokens": 5}' \
+  --model-loader-extra-config '{"enable_multithread_load": true, "num_threads": 96}' \
+  --compilation-config '{"pass_config": {"fuse_allreduce_rms": false}}' \
+  --distributed-timeout-seconds 3600
 ```
 
-vLLM will use Ray internally to shard the model across `VLLM_TENSOR_PARALLEL` GPUs. The OpenAI-compatible API is available at:
+**Flags that differ from Docker (Option C):**
 
-```
-http://<head_node_ip>:8001/v1
-```
+| Flag | Option A (Ray) | Option C (Docker) | Why |
+|---|---|---|---|
+| `--pipeline-parallel-size` | `2` | *(absent)* | Splits pipeline stages across nodes via Ray |
+| `--distributed-executor-backend` | `ray` | *(absent)* | Uses Ray for cross-node worker coordination |
+| `--max-num-seqs` | `256` | `16` | Multi-node cluster handles far more concurrent sequences |
+| `--compilation-config` | `fuse_allreduce_rms: false` | *(absent)* | Disables fused allreduce for Mamba SSM correctness across pipeline stages |
+| `--distributed-timeout-seconds` | `3600` | *(absent)* | Generous timeout for multi-node barrier synchronisation |
+
+The API is served at `http://<head_node_ip>:8001/v1`.
 
 ### Option B — SGLang
 
@@ -236,8 +265,11 @@ NVIDIA_MODEL_NAME=nvidia/nemotron-3-ultra
 | `RAY_PORT` | `6379` | Ray GCS port |
 | `RAY_DASHBOARD_PORT` | `8265` | Ray web dashboard port |
 | `VLLM_MODEL` | `nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-NVFP4` | HuggingFace model ID or local path |
-| `VLLM_TENSOR_PARALLEL` | `4` | GPU count (4× H100-80GB minimum for NVFP4) |
+| `VLLM_TENSOR_PARALLEL` | `4` | TP size per node |
+| `VLLM_PIPELINE_PARALLEL` | `2` | PP stages across nodes — total GPUs = TP × PP |
+| `VLLM_MAX_NUM_SEQS` | `256` | Max concurrent sequences (use 16 for single-node Docker) |
 | `VLLM_QUANTIZATION` | `auto` | `auto` \| `fp4` \| `nvfp4` — explicit override if auto-detect fails |
+| `VLLM_DIST_TIMEOUT` | `3600` | `--distributed-timeout-seconds` for cross-node barrier sync |
 | `VLLM_PORT` | `8001` | vLLM OpenAI-compatible API port |
 | `VLLM_MAX_MODEL_LEN` | `262144` | Maximum sequence length (256K context) |
 | `SGLANG_MODEL` | *(same as VLLM_MODEL)* | Model for SGLang |
