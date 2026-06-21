@@ -4,7 +4,7 @@ const MODEL = "nvidia/nemotron-3-ultra-550b-a55b";
 
 function createClient(): OpenAI {
   return new OpenAI({
-    baseURL: "https://integrate.api.nvidia.com/v1",
+    baseURL: process.env.NVIDIA_API_BASE_URL ?? "https://integrate.api.nvidia.com/v1",
     apiKey: process.env.NVIDIA_API_KEY ?? "",
   });
 }
