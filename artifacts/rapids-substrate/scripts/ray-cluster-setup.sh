@@ -16,9 +16,11 @@
 #   RAY_PORT      — Ray GCS port (default: 6379)
 #
 # Optional env vars for vLLM / SGLang:
-#   VLLM_MODEL        — HuggingFace model ID or local path (default: nvidia/Nemotron-3-Ultra-550B-A55B)
-#   VLLM_TENSOR_PARALLEL — number of GPUs for tensor parallelism (default: 8)
+#   VLLM_MODEL        — HuggingFace model ID or local path
+#                       (default: nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-NVFP4)
+#   VLLM_TENSOR_PARALLEL — number of GPUs for tensor parallelism (default: 4 for NVFP4)
 #   VLLM_PORT         — port for the OpenAI-compatible API (default: 8001)
+#   VLLM_QUANTIZATION — quantization backend: auto | fp4 | nvfp4 (default: auto)
 #   SGLANG_MODEL      — model ID for SGLang (default: same as VLLM_MODEL)
 #   SGLANG_PORT       — port for SGLang server (default: 8002)
 #   HF_TOKEN          — HuggingFace token (required for gated models)
@@ -31,10 +33,11 @@ RAY_PORT="${RAY_PORT:-6379}"
 RAY_DASHBOARD_PORT="${RAY_DASHBOARD_PORT:-8265}"
 RAY_HEAD_IP="${RAY_HEAD_IP:-}"
 
-VLLM_MODEL="${VLLM_MODEL:-nvidia/Nemotron-3-Ultra-550B-A55B}"
-VLLM_TENSOR_PARALLEL="${VLLM_TENSOR_PARALLEL:-8}"
+VLLM_MODEL="${VLLM_MODEL:-nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-NVFP4}"
+VLLM_TENSOR_PARALLEL="${VLLM_TENSOR_PARALLEL:-4}"
 VLLM_PORT="${VLLM_PORT:-8001}"
 VLLM_MAX_MODEL_LEN="${VLLM_MAX_MODEL_LEN:-32768}"
+VLLM_QUANTIZATION="${VLLM_QUANTIZATION:-auto}"
 
 SGLANG_MODEL="${SGLANG_MODEL:-${VLLM_MODEL}}"
 SGLANG_PORT="${SGLANG_PORT:-8002}"
@@ -95,8 +98,16 @@ cmd_vllm() {
   log "Launching vLLM server on Ray cluster at ${RAY_ADDRESS}"
   log "Model:            ${VLLM_MODEL}"
   log "Tensor parallel:  ${VLLM_TENSOR_PARALLEL}"
+  log "Quantization:     ${VLLM_QUANTIZATION}"
   log "Max model len:    ${VLLM_MAX_MODEL_LEN}"
   log "Serving on port:  ${VLLM_PORT}"
+
+  # Build quantization flag — "auto" lets vLLM detect NVFP4 from the model config;
+  # pass --quantization fp4 explicitly if auto-detection fails on your vLLM version.
+  QUANT_FLAG=()
+  if [[ "${VLLM_QUANTIZATION}" != "auto" ]]; then
+    QUANT_FLAG=(--quantization "${VLLM_QUANTIZATION}")
+  fi
 
   python -m vllm.entrypoints.openai.api_server \
     --model "${VLLM_MODEL}" \
@@ -104,9 +115,10 @@ cmd_vllm() {
     --port "${VLLM_PORT}" \
     --max-model-len "${VLLM_MAX_MODEL_LEN}" \
     --trust-remote-code \
-    ${HF_TOKEN:+--huggingface-token "${HF_TOKEN}"} \
+    --dtype auto \
     --enable-chunked-prefill \
-    --dtype bfloat16
+    "${QUANT_FLAG[@]}" \
+    ${HF_TOKEN:+--huggingface-token "${HF_TOKEN}"}
 }
 
 cmd_sglang() {
@@ -169,8 +181,9 @@ case "${COMMAND}" in
     echo "    RAY_PORT      GCS port (default: 6379)"
     echo ""
     echo "  Optional env (vLLM / SGLang):"
-    echo "    VLLM_MODEL              model ID (default: nvidia/Nemotron-3-Ultra-550B-A55B)"
-    echo "    VLLM_TENSOR_PARALLEL    GPU count for tensor parallelism (default: 8)"
+    echo "    VLLM_MODEL              model ID (default: nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-NVFP4)"
+    echo "    VLLM_TENSOR_PARALLEL    GPU count for tensor parallelism (default: 4)"
+    echo "    VLLM_QUANTIZATION       auto | fp4 | nvfp4 (default: auto)"
     echo "    VLLM_PORT               API port (default: 8001)"
     echo "    SGLANG_PORT             SGLang API port (default: 8002)"
     echo "    HF_TOKEN                HuggingFace token for gated models"

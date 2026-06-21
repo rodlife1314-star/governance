@@ -36,7 +36,7 @@ pip install vllm          # vLLM
 pip install sglang        # SGLang
 ```
 
-> **Nemotron-550B sizing note**: The model is a 550B-parameter MoE (55B active parameters). FP8/BF16 checkpoint requires ~1.1 TB VRAM across the full weight matrix, but MoE active-weight footprint is ~110 GB for BF16. A practical minimum is **8× H100-80GB** for tensor parallelism, or 4× H100 with FP8 quantization.
+> **Nemotron-550B NVFP4 sizing note**: The `NVFP4` checkpoint uses 4-bit quantization (~0.5 bytes/param), reducing the full weight footprint to ~275 GB — roughly **4× smaller than BF16** (1.1 TB). The MoE active-parameter footprint is ~27 GB, but all expert weights must be resident. Practical minimum: **4× H100-80GB** (TP=4, 320 GB total). For the BF16/FP8 checkpoint, 8× H100 is required.
 
 ---
 
@@ -84,10 +84,13 @@ On the head node (or any node with GPU access to the cluster):
 
 ```bash
 export RAY_HEAD_IP=<head_node_ip>
-export VLLM_MODEL=nvidia/Nemotron-3-Ultra-550B-A55B
-export VLLM_TENSOR_PARALLEL=8          # one per H100
+export MODEL_CKPT=nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-NVFP4
+export VLLM_MODEL="${MODEL_CKPT}"
+export VLLM_TENSOR_PARALLEL=4          # 4× H100-80GB minimum for NVFP4
 export VLLM_PORT=8001
 export VLLM_MAX_MODEL_LEN=32768
+export VLLM_QUANTIZATION=auto          # vLLM detects NVFP4 from model config;
+                                       # set fp4 explicitly if auto-detection fails
 export HF_TOKEN=<your_hf_token>        # required for gated model
 
 ./scripts/ray-cluster-setup.sh vllm
@@ -103,8 +106,9 @@ http://<head_node_ip>:8001/v1
 
 ```bash
 export RAY_HEAD_IP=<head_node_ip>
-export SGLANG_MODEL=nvidia/Nemotron-3-Ultra-550B-A55B
-export SGLANG_TENSOR_PARALLEL=8
+export MODEL_CKPT=nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-NVFP4
+export SGLANG_MODEL="${MODEL_CKPT}"
+export SGLANG_TENSOR_PARALLEL=4
 export SGLANG_PORT=8002
 export HF_TOKEN=<your_hf_token>
 
@@ -153,8 +157,9 @@ No other changes are needed — vLLM and SGLang both speak the OpenAI API protoc
 | `RAY_HEAD_IP` | *(required)* | IP address of the Ray head node |
 | `RAY_PORT` | `6379` | Ray GCS port |
 | `RAY_DASHBOARD_PORT` | `8265` | Ray web dashboard port |
-| `VLLM_MODEL` | `nvidia/Nemotron-3-Ultra-550B-A55B` | HuggingFace model ID or local path |
-| `VLLM_TENSOR_PARALLEL` | `8` | GPU count for tensor parallelism |
+| `VLLM_MODEL` | `nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-NVFP4` | HuggingFace model ID or local path |
+| `VLLM_TENSOR_PARALLEL` | `4` | GPU count (4× H100-80GB minimum for NVFP4) |
+| `VLLM_QUANTIZATION` | `auto` | `auto` \| `fp4` \| `nvfp4` — explicit override if auto-detect fails |
 | `VLLM_PORT` | `8001` | vLLM OpenAI-compatible API port |
 | `VLLM_MAX_MODEL_LEN` | `32768` | Maximum sequence length |
 | `SGLANG_MODEL` | *(same as VLLM_MODEL)* | Model for SGLang |
@@ -180,7 +185,7 @@ curl http://<head_node_ip>:8001/v1/models
 curl http://<head_node_ip>:8001/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "nvidia/Nemotron-3-Ultra-550B-A55B",
+    "model": "nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-NVFP4",
     "messages": [{"role": "user", "content": "ping"}],
     "max_tokens": 16
   }'
@@ -232,8 +237,8 @@ Operator query
       │
       ├─── Gemini 2.5 Flash (cloud, default for RAPIDS)
       │
-      └─── NVIDIA Nemotron-550B ──► NVIDIA cloud API  (INFERENCE_PROVIDER=nvidia)
-                                 └► local vLLM/SGLang  (NVIDIA_API_BASE_URL set)
+      └─── NVIDIA Nemotron-550B ──► NVIDIA cloud API        (INFERENCE_PROVIDER=nvidia)
+              (NVFP4 checkpoint) └► local vLLM/SGLang       (NVIDIA_API_BASE_URL set)
                                         │
                                         ▼
                                    Ray cluster
