@@ -7,7 +7,9 @@ const WORKSPACES = [
     description: "Multi-domain field analysis · RAPIDS protocol · Sovereign dispatch · Dimensional intelligence",
     href: "/pathfinder/",
     accent: "#E0AF68",
+    accentRgb: "224,175,104",
     status: "ONLINE",
+    label: "Pathfinder cognitive observation engine",
   },
   {
     id: "SYSTEM",
@@ -15,7 +17,19 @@ const WORKSPACES = [
     description: "Memory bank · Governance doctrine · Workflow engine · Routing decisions · Scenario control",
     href: "/dashboard",
     accent: "#7DCFFF",
+    accentRgb: "125,207,255",
     status: "ONLINE",
+    label: "OCTAGON operational core system",
+  },
+  {
+    id: "SPECTRA-7",
+    subtitle: "ANOMALY INVESTIGATION SURFACE",
+    description: "Spectral analysis · Signal detection · Anomaly classification · Pattern divergence mapping",
+    href: "/spectra7/",
+    accent: "#BB9AF7",
+    accentRgb: "187,154,247",
+    status: "ONLINE",
+    label: "Spectra-7 anomaly investigation and spectral analysis",
   },
 ];
 
@@ -133,6 +147,7 @@ export default function Portal() {
             <a
               key={ws.id}
               href={ws.href}
+              aria-label={ws.label}
               onMouseEnter={() => setHovered(ws.id)}
               onMouseLeave={() => setHovered(null)}
               style={{
@@ -142,7 +157,7 @@ export default function Portal() {
                 borderRadius: "6px",
                 padding: "28px 28px 24px",
                 background: hovered === ws.id
-                  ? `rgba(${ws.accent === "#E0AF68" ? "224,175,104" : "125,207,255"},0.04)`
+                  ? `rgba(${ws.accentRgb},0.04)`
                   : "rgba(255,255,255,0.02)",
                 cursor: "pointer",
                 transition: "all 0.25s ease",

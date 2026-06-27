@@ -1,0 +1,22 @@
+# OCTAGON — Operator Assistant Architecture
+
+> A local-first cognitive workspace for competition demonstration: planning, retrieval, governance, and operational workflow execution with full sovereignty.
+
+## Main sections
+
+- [OCTAGON Operator Console](/) — Root portal; select SYSTEM or PATHFINDER entry point
+- [SYS_STATUS Dashboard](/dashboard) — Live system metrics, routing distribution chart, and recent activity feed
+- [MEMORY_BANK](/memory) — Browse, search, tag-filter, create, and edit markdown-style memory entries
+- [DOCTRINE](/doctrine) — Governance rules with priority ordering, scope (local/cloud/hybrid), conditions, and active toggle
+- [WORKFLOWS](/workflows) — Operational workflow tracking with per-step execution mode and status
+- [ROUTING](/routing) — Interactive routing evaluator: local vs cloud scoring and decision history
+- [SCENARIOS](/scenarios) — Competition demo scenarios with step-by-step status management
+
+## Sub-applications
+
+- [Pathfinder Governance](/pathfinder/) — Cognitive observation engine: multi-domain field analysis, RAPIDS protocol, sovereign dispatch
+- [SPECTRA-7](/spectra7/) — Anomaly investigation and spectral analysis surface
+
+## Sitemap
+
+- [XML Sitemap](/sitemap.xml)
