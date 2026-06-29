@@ -112,7 +112,7 @@
   --chart-4: 120 100% 40%;
   --chart-5: 120 100% 10%;
 
-  --app-font-sans: 'Space Mono', monospace;
+  --app-font-sans: 'Inter', ui-sans-serif, sans-serif;
   --app-font-serif: 'Space Mono', monospace;
   --app-font-mono: 'Space Mono', monospace;
   --radius: 0px; 
