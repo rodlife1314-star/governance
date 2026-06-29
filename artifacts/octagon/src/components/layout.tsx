@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { Activity, Brain, ShieldAlert, GitMerge, Network, PlaySquare, ChevronLeft, Menu, X } from "lucide-react";
+import { Activity, Brain, ShieldAlert, GitMerge, Network, PlaySquare, ChevronLeft, Menu, X, Eye } from "lucide-react";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
@@ -17,6 +17,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { href: "/workflows", label: "WORKFLOWS", icon: GitMerge },
     { href: "/routing", label: "ROUTING", icon: Network },
     { href: "/scenarios", label: "SCENARIOS", icon: PlaySquare },
+    { href: "/seed", label: "SEED_MODE", icon: Eye },
   ];
 
   const isActive = (href: string) =>

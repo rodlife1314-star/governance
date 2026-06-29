@@ -12,6 +12,7 @@ import Workflows from "@/pages/workflows";
 import WorkflowDetail from "@/pages/workflow-detail";
 import Routing from "@/pages/routing";
 import Scenarios from "@/pages/scenarios";
+import SeedMode from "@/pages/seed";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +33,7 @@ function Router() {
             <Route path="/workflows/:id" component={WorkflowDetail} />
             <Route path="/routing" component={Routing} />
             <Route path="/scenarios" component={Scenarios} />
+            <Route path="/seed" component={SeedMode} />
             <Route component={NotFound} />
           </Switch>
         </Layout>
