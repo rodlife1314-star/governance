@@ -91,7 +91,7 @@ export default function Portal() {
       }} />
 
       {/* Content */}
-      <div style={{ position: "relative", zIndex: 1, width: "100%", maxWidth: "700px" }}>
+      <main style={{ position: "relative", zIndex: 1, width: "100%", maxWidth: "700px" }}>
 
         {/* Header */}
         <div style={{
@@ -110,16 +110,18 @@ export default function Portal() {
           }}>
             OPERATOR CONSOLE
           </div>
-          <div style={{
+          <h1 style={{
             fontSize: "clamp(42px, 8vw, 72px)",
             fontWeight: 700,
             letterSpacing: "0.18em",
             color: "#E8ECF8",
             lineHeight: 1,
             marginBottom: "14px",
+            margin: "0 0 14px",
+            padding: 0,
           }}>
             OCTAGON
-          </div>
+          </h1>
           <div style={{
             width: "48px",
             height: "1px",
@@ -295,7 +297,7 @@ export default function Portal() {
             <span>SOVEREIGNTY · ENFORCED</span>
           </div>
         </div>
-      </div>
+      </main>
 
       <style>{`
         @keyframes oct-pulse {

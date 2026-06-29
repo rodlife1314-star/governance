@@ -142,9 +142,9 @@ export default function ObservationAperture({ onSubmit, onFieldMode, domain }: O
                 {domain.label.toUpperCase()} · {domain.tagline}
               </div>
             )}
-            <h2 className="text-[28px] md:text-[36px] font-mono font-bold text-white leading-tight tracking-tight">
+            <h1 className="text-[28px] md:text-[36px] font-mono font-bold text-white leading-tight tracking-tight">
               What has your attention?
-            </h2>
+            </h1>
           </motion.div>
 
           {/* Observation input */}
