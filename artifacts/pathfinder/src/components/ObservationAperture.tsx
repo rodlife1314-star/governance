@@ -194,7 +194,7 @@ export default function ObservationAperture({ onSubmit, onFieldMode, domain }: O
             <button
               onClick={handleSubmit}
               disabled={!canSubmit}
-              className="flex items-center gap-2 px-5 py-2 rounded font-mono text-[10px] font-bold tracking-[0.2em] uppercase transition-all cursor-pointer"
+              className="flex items-center gap-2 px-5 py-3 md:py-2 rounded font-mono text-[10px] font-bold tracking-[0.2em] uppercase transition-all cursor-pointer"
               style={{
                 backgroundColor: canSubmit ? `${accent}10` : "transparent",
                 border: `1px solid ${canSubmit ? `${accent}40` : "rgba(255,255,255,0.04)"}`,

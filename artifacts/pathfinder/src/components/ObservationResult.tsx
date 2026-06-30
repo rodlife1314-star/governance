@@ -100,7 +100,7 @@ export default function ObservationResult({
             <button
               key={id}
               onClick={() => setAugTab(id)}
-              className={`flex-1 py-2.5 text-[9px] font-mono font-bold tracking-[0.2em] transition-all cursor-pointer border-b-2 ${
+              className={`flex-1 py-3 text-[9px] font-mono font-bold tracking-[0.2em] transition-all cursor-pointer border-b-2 ${
                 augTab === id
                   ? "text-white border-[#E0AF68]"
                   : "text-[#5A6575] border-transparent hover:text-[#8A9DB0]"
@@ -180,47 +180,49 @@ export default function ObservationResult({
 
       {/* ── Action bar ── */}
       <div className="shrink-0 border-t border-white/[0.04] bg-[#07080B]">
+        {/* Mobile: primary actions row */}
         <div className="flex items-center justify-between px-4 md:px-6 py-2.5 gap-3">
 
-          {/* Suggested actions */}
-          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
-            <span className="text-[7px] font-mono text-[#3A4555] uppercase tracking-wider shrink-0 mr-1">
+          {/* Suggested actions — scrollable */}
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none min-w-0">
+            <span className="text-[7px] font-mono text-[#3A4555] uppercase tracking-wider shrink-0 mr-1 hidden sm:block">
               ACTIONS
             </span>
             {analysis.suggestedActions.map((action) => (
               <button
                 key={action}
-                className="shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded border border-white/[0.05] bg-white/[0.01] text-[8px] font-mono text-[#5A6575] hover:text-[#8A9DB0] hover:border-white/[0.08] transition-all cursor-pointer"
+                className="shrink-0 flex items-center gap-1.5 px-2.5 py-2 md:py-1 rounded border border-white/[0.05] bg-white/[0.01] text-[8px] font-mono text-[#5A6575] hover:text-[#8A9DB0] hover:border-white/[0.08] transition-all cursor-pointer"
               >
                 {actionIcon(action)}
-                <span>{action}</span>
+                <span className="hidden sm:inline">{action}</span>
               </button>
             ))}
           </div>
 
-          {/* SPECTRA-7 deep investigation — only available after domain classification */}
-          {onLaunchSpectra && (
-            <button
-              onClick={onLaunchSpectra}
-              className="shrink-0 flex items-center gap-1.5 px-3 py-1 rounded border border-[#e8405a]/25 bg-[#e8405a]/05 text-[8px] font-mono font-bold tracking-wider text-[#e8405a]/60 hover:text-[#e8405a] hover:border-[#e8405a]/50 transition-all cursor-pointer"
-            >
-              <span>SPECTRA-7 ↗</span>
-            </button>
-          )}
+          {/* SPECTRA-7 + SEAL — always visible, larger touch targets on mobile */}
+          <div className="flex items-center gap-2 shrink-0">
+            {onLaunchSpectra && (
+              <button
+                onClick={onLaunchSpectra}
+                className="flex items-center gap-1.5 px-3 py-2 md:py-1 rounded border border-[#e8405a]/25 bg-[#e8405a]/05 text-[8px] font-mono font-bold tracking-wider text-[#e8405a]/60 hover:text-[#e8405a] hover:border-[#e8405a]/50 transition-all cursor-pointer"
+              >
+                <span>SPECTRA-7 ↗</span>
+              </button>
+            )}
 
-          {/* Seal observation */}
-          <button
-            onClick={() => onSeal(analysis.rawObservation)}
-            disabled={sealing}
-            className={`shrink-0 flex items-center gap-1.5 px-3 py-1 rounded border text-[8px] font-mono font-bold tracking-wider transition-all cursor-pointer ${
-              sealedFlash
-                ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-400"
-                : "border-[#E0AF68]/30 bg-[#E0AF68]/05 text-[#E0AF68]/70 hover:text-[#E0AF68] hover:border-[#E0AF68]/50"
-            }`}
-          >
-            <Archive className="w-2.5 h-2.5" />
-            <span>{sealedFlash ? "SEALED" : sealing ? "SEALING…" : "SEAL"}</span>
-          </button>
+            <button
+              onClick={() => onSeal(analysis.rawObservation)}
+              disabled={sealing}
+              className={`flex items-center gap-1.5 px-3 py-2 md:py-1 rounded border text-[8px] font-mono font-bold tracking-wider transition-all cursor-pointer ${
+                sealedFlash
+                  ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-400"
+                  : "border-[#E0AF68]/30 bg-[#E0AF68]/05 text-[#E0AF68]/70 hover:text-[#E0AF68] hover:border-[#E0AF68]/50"
+              }`}
+            >
+              <Archive className="w-2.5 h-2.5" />
+              <span>{sealedFlash ? "SEALED" : sealing ? "SEALING…" : "SEAL"}</span>
+            </button>
+          </div>
         </div>
 
         {/* Governance — hidden by default */}

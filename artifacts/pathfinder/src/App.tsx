@@ -302,7 +302,7 @@ export default function App() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(baseBody),
     }).then(r => r.json()).then(d => {
-      if (d?.success) { setObservationAnalysis(d as ObservationAnalysis); setAnalysisReady(true); }
+      if (d && (d.success || d.degraded)) { setObservationAnalysis(d as ObservationAnalysis); setAnalysisReady(true); }
     }).catch(() => {});
 
     // Wait for AETHER — then hand its requirement packet directly to RAPIDS.

@@ -595,7 +595,7 @@ export default function CoverageGate({
                 initial={{ opacity: 0, scale: 0.96 }}
                 animate={{ opacity: 1, scale: 1 }}
                 onClick={onViewAnalysis}
-                className="flex items-center gap-2 px-5 py-2 rounded border border-[#E0AF68]/40 bg-[#E0AF68]/10 text-[#E0AF68] font-mono text-[10px] font-bold tracking-[0.2em] uppercase hover:bg-[#E0AF68]/15 transition-all cursor-pointer"
+                className="flex items-center gap-2 px-5 py-3 md:py-2 rounded border border-[#E0AF68]/40 bg-[#E0AF68]/10 text-[#E0AF68] font-mono text-[10px] font-bold tracking-[0.2em] uppercase hover:bg-[#E0AF68]/15 transition-all cursor-pointer"
               >
                 <span>VIEW ANALYSIS</span>
                 <ArrowRight className="w-3 h-3" />

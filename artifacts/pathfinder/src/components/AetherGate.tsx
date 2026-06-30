@@ -397,7 +397,7 @@ export default function AetherGate({ observation, packet, onProceed, onNewObserv
                 initial={{ opacity: 0, scale: 0.96 }}
                 animate={{ opacity: 1, scale: 1 }}
                 onClick={onProceed}
-                className="flex items-center gap-2 px-5 py-2 rounded font-mono text-[10px] font-bold tracking-[0.2em] uppercase transition-all cursor-pointer"
+                className="flex items-center gap-2 px-5 py-3 md:py-2 rounded font-mono text-[10px] font-bold tracking-[0.2em] uppercase transition-all cursor-pointer"
                 style={{
                   backgroundColor: `${accent}12`,
                   border: `1px solid ${accent}40`,
