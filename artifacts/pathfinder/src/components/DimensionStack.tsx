@@ -184,12 +184,14 @@ const DIRECTION_COLOR: Record<string, string> = {
   positive: "#4CD964",
   negative: "#FF6B6B",
   neutral:  "#E0AF68",
+  unknown:  "#4A5568",
 };
 
 const DIRECTION_LABEL: Record<string, string> = {
   positive: "↑",
   neutral:  "→",
   negative: "↓",
+  unknown:  "—",
 };
 
 const STATUS_CONFIG: Record<FeedStatus, { label: string; dot: string; text: string; bg: string; border: string }> = {
@@ -337,7 +339,7 @@ function DimensionRow({
   const [expanded, setExpanded] = useState(false);
   const color    = DIRECTION_COLOR[dim.direction];
   const arrow    = DIRECTION_LABEL[dim.direction];
-  const barWidth = Math.min(100, dim.contribution);
+  const barWidth = Math.min(100, dim.contribution ?? 0);
   const hasValue = feed && feed.valueLabel && feed.status !== "unavailable";
 
   return (
@@ -369,7 +371,7 @@ function DimensionRow({
               </div>
               <div className="flex items-center space-x-1.5 shrink-0 mt-0.5">
                 {feed && <FeedStatusBadge status={feed.status} />}
-                <span className="text-[10px] font-mono font-bold" style={{ color }}>{arrow} {dim.contribution.toFixed(1)}%</span>
+                <span className="text-[10px] font-mono font-bold" style={{ color }}>{arrow} {dim.contribution != null ? `${dim.contribution.toFixed(1)}%` : "—"}</span>
               </div>
             </div>
 

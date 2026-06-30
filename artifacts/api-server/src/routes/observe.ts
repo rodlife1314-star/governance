@@ -92,16 +92,16 @@ function buildFallback(observation: string) {
     inferredDomainFull: "Domain inference unavailable",
     confidence: 0,
     dimensions: [
-      { id: "signal_1",  name: "Primary Signal",   signal: "RAPIDS unavailable — observation recorded", contribution: 12, direction: "neutral" },
-      { id: "signal_2",  name: "Secondary Signal",  signal: "RAPIDS unavailable — manual review required", contribution: 10, direction: "neutral" },
-      { id: "context",   name: "Context",           signal: "Authority feeds degraded", contribution: 10, direction: "neutral" },
-      { id: "temporal",  name: "Temporal",          signal: "Timing signals unavailable", contribution: 10, direction: "neutral" },
-      { id: "scale",     name: "Scale",             signal: "Scale assessment degraded", contribution: 10, direction: "neutral" },
-      { id: "causality", name: "Causality",         signal: "Causal chain unclear — feeds offline", contribution: 10, direction: "neutral" },
-      { id: "precedent", name: "Precedent",         signal: "Historical comparison unavailable", contribution: 10, direction: "neutral" },
-      { id: "risk",      name: "Risk",              signal: "Risk assessment degraded", contribution: 10, direction: "neutral" },
-      { id: "action",    name: "Action Horizon",    signal: "Action signals unavailable", contribution: 10, direction: "neutral" },
-      { id: "unknown",   name: "Unknown Factors",   signal: "RAPIDS engine offline", contribution: 8,  direction: "neutral" },
+      { id: "signal_1",  name: "Primary Signal",   signal: "RAPIDS unavailable — observation recorded", contribution: null, direction: "unknown" },
+      { id: "signal_2",  name: "Secondary Signal",  signal: "RAPIDS unavailable — manual review required", contribution: null, direction: "unknown" },
+      { id: "context",   name: "Context",           signal: "Authority feeds degraded", contribution: null, direction: "unknown" },
+      { id: "temporal",  name: "Temporal",          signal: "Timing signals unavailable", contribution: null, direction: "unknown" },
+      { id: "scale",     name: "Scale",             signal: "Scale assessment degraded", contribution: null, direction: "unknown" },
+      { id: "causality", name: "Causality",         signal: "Causal chain unclear — feeds offline", contribution: null, direction: "unknown" },
+      { id: "precedent", name: "Precedent",         signal: "Historical comparison unavailable", contribution: null, direction: "unknown" },
+      { id: "risk",      name: "Risk",              signal: "Risk assessment degraded", contribution: null, direction: "unknown" },
+      { id: "action",    name: "Action Horizon",    signal: "Action signals unavailable", contribution: null, direction: "unknown" },
+      { id: "unknown",   name: "Unknown Factors",   signal: "RAPIDS engine offline", contribution: null, direction: "unknown" },
     ],
     pattern: "RAPIDS engine unavailable — operator field judgment required",
     findings: [
@@ -299,7 +299,7 @@ router.post("/observe", async (req, res) => {
     res.json({ success: true, rawObservation: trimmed, engine: adapter.name, ...parsed });
   } catch (err: any) {
     req.log.error(err, "observe analysis failed");
-    res.json({ success: true, rawObservation: trimmed, ...buildFallback(trimmed) });
+    res.json({ success: false, degraded: true, rawObservation: trimmed, ...buildFallback(trimmed) });
   }
 });
 

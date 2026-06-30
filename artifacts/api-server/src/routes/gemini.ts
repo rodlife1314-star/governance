@@ -327,16 +327,16 @@ function buildFallback(body: Record<string, unknown>) {
   const spotPrice = body.spotPrice as number | undefined;
   return {
     dimensions: [
-      { id: "dollar",        name: "Dollar / DXY",        signal: "Authority feed degraded — DXY direction unavailable",          contribution: 10, direction: "neutral" },
-      { id: "realyields",    name: "Real Yields",          signal: "Authority feed degraded — TIPS rate unavailable",              contribution: 10, direction: "neutral" },
-      { id: "instflows",     name: "Institutional Flows",  signal: "Authority feed degraded — institutional flow signal unavailable", contribution: 10, direction: "neutral" },
-      { id: "futures",       name: "Futures Positioning",  signal: "Authority feed degraded — futures positioning unavailable",    contribution: 10, direction: "neutral" },
-      { id: "onchain",       name: "On-Chain Activity",    signal: "Authority feed degraded — on-chain signal unavailable",        contribution: 10, direction: "neutral" },
-      { id: "risksentiment", name: "Risk Sentiment",       signal: "Authority feed degraded — VIX risk posture unavailable",       contribution: 10, direction: "neutral" },
-      { id: "commodity",     name: "Commodity Complex",    signal: "Authority feed degraded — WTI commodity signal unavailable",   contribution: 10, direction: "neutral" },
-      { id: "geopolitics",   name: "Geopolitics",          signal: "No authority feed — operator assessment required",             contribution: 10, direction: "neutral" },
-      { id: "technical",     name: "Technical Structure",  signal: `Spot $${spotPrice ?? "unavailable"} — QQQ authority feed degraded, technical read unavailable`, contribution: 10, direction: "neutral" },
-      { id: "liquidity",     name: "Liquidity / Depth",    signal: "Authority feed degraded — liquidity signal unavailable",       contribution: 10, direction: "neutral" },
+      { id: "dollar",        name: "Dollar / DXY",        signal: "Authority feed degraded — DXY direction unavailable",          contribution: null, direction: "unknown" },
+      { id: "realyields",    name: "Real Yields",          signal: "Authority feed degraded — TIPS rate unavailable",              contribution: null, direction: "unknown" },
+      { id: "instflows",     name: "Institutional Flows",  signal: "Authority feed degraded — institutional flow signal unavailable", contribution: null, direction: "unknown" },
+      { id: "futures",       name: "Futures Positioning",  signal: "Authority feed degraded — futures positioning unavailable",    contribution: null, direction: "unknown" },
+      { id: "onchain",       name: "On-Chain Activity",    signal: "Authority feed degraded — on-chain signal unavailable",        contribution: null, direction: "unknown" },
+      { id: "risksentiment", name: "Risk Sentiment",       signal: "Authority feed degraded — VIX risk posture unavailable",       contribution: null, direction: "unknown" },
+      { id: "commodity",     name: "Commodity Complex",    signal: "Authority feed degraded — WTI commodity signal unavailable",   contribution: null, direction: "unknown" },
+      { id: "geopolitics",   name: "Geopolitics",          signal: "No authority feed — operator assessment required",             contribution: null, direction: "unknown" },
+      { id: "technical",     name: "Technical Structure",  signal: `Spot $${spotPrice ?? "unavailable"} — QQQ authority feed degraded, technical read unavailable`, contribution: null, direction: "unknown" },
+      { id: "liquidity",     name: "Liquidity / Depth",    signal: "Authority feed degraded — liquidity signal unavailable",       contribution: null, direction: "unknown" },
     ],
     pattern: "RAPIDS engine unavailable — all authority feeds degraded — operator field observation required",
     findings: [

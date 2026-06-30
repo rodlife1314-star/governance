@@ -29,13 +29,14 @@ const AXIS_LABELS = ["DXY", "RYLD", "INST", "FUT", "CHN", "RISK", "CMDT", "GEO",
 const DIR_COLOR: Record<string, string> = {
   positive: "#4CD964",
   negative: "#FF6B6B",
-  neutral: "#E0AF68",
+  neutral:  "#E0AF68",
+  unknown:  "#4A5568",
 };
 
 function buildPolygon(dims: DimensionEntry[]) {
   if (dims.length === 0) return "";
   return dims.map((d, i) => {
-    const r = (d.contribution / 100) * OUTER_R;
+    const r = ((d.contribution ?? 0) / 100) * OUTER_R;
     const a = angle(i);
     const p = polarToCart(CX, CY, r, a);
     return `${p.x},${p.y}`;
@@ -44,7 +45,8 @@ function buildPolygon(dims: DimensionEntry[]) {
 
 function dominantColor(dims: DimensionEntry[]): string {
   const weighted = dims.reduce((acc, d) => {
-    const score = d.direction === "positive" ? d.contribution : d.direction === "negative" ? -d.contribution : 0;
+    const c = d.contribution ?? 0;
+    const score = d.direction === "positive" ? c : d.direction === "negative" ? -c : 0;
     return acc + score;
   }, 0);
   if (weighted > 20) return "#4CD964";
@@ -170,9 +172,9 @@ export default function RapidsAperture({ dimensions, loading, rapidsCompression 
           )}
 
           {!loading && dimensions.map((d, i) => {
-            const r = (d.contribution / 100) * OUTER_R;
+            const r = ((d.contribution ?? 0) / 100) * OUTER_R;
             const p = polarToCart(CX, CY, r, angle(i));
-            const color = DIR_COLOR[d.direction];
+            const color = DIR_COLOR[d.direction] ?? DIR_COLOR.unknown;
             return (
               <circle
                 key={d.id}

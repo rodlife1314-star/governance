@@ -54,8 +54,8 @@ export default function ActionPanel({
   const structure = basis !== null ? (basis >= 0 ? "CONTANGO" : "BACKWARDATION") : null;
 
   const topDimensions = (analysis?.dimensions || [])
-    .filter(d => d.contribution > 0)
-    .sort((a, b) => b.contribution - a.contribution)
+    .filter(d => (d.contribution ?? 0) > 0)
+    .sort((a, b) => (b.contribution ?? 0) - (a.contribution ?? 0))
     .slice(0, 3);
 
   const route = (id: string, r: Route) =>
@@ -97,8 +97,8 @@ export default function ActionPanel({
             {topDimensions.map(d => (
               <div key={d.name} className="text-right">
                 <div className="text-[8px] font-mono text-[#6B7280] uppercase tracking-wider">{d.name.split("/")[0].trim()}</div>
-                <div className={`text-[10px] font-mono font-bold ${d.contribution > 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                  {d.contribution > 0 ? "+" : ""}{d.contribution.toFixed(1)}%
+                <div className={`text-[10px] font-mono font-bold ${(d.contribution ?? 0) > 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                  {d.contribution != null ? `${d.contribution > 0 ? "+" : ""}${d.contribution.toFixed(1)}%` : "—"}
                 </div>
               </div>
             ))}

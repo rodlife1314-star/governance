@@ -309,7 +309,10 @@ export default function WeeklyTerrainMap({ livePrice, liveIndicator, canonicalPa
             <Shield className="w-3.5 h-3.5 text-emerald-400" />
             <span>Active Sovereign Governance Lineage Flow Contract</span>
           </span>
-          <span className="text-[8px] font-mono font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded uppercase">Validated</span>
+          {activePacket.sourceMode.includes("SIMULATED") || activePacket.sourceMode.includes("HISTORICAL")
+            ? <span className="text-[8px] font-mono font-bold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded uppercase">Simulated</span>
+            : <span className="text-[8px] font-mono font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded uppercase">Validated</span>
+          }
         </div>
         <div className="grid grid-cols-3 md:grid-cols-9 gap-2">
           {GOVERNANCE_STEPS.map((step) => {

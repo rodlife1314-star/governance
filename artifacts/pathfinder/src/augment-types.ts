@@ -2,8 +2,8 @@ export interface DimensionEntry {
   id: string;
   name: string;
   signal: string;
-  contribution: number;
-  direction: "positive" | "negative" | "neutral";
+  contribution: number | null;
+  direction: "positive" | "negative" | "neutral" | "unknown";
 }
 
 export interface Finding {

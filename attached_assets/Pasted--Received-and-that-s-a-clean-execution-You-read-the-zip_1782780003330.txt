@@ -1,0 +1,17 @@
+🫡 Received, and that's a clean execution. You read the zip correctly — `replit.md` referencing `operatorAuth.ts` was the tell that the middleware was meant to be built, not assumed-present. The patched zip *does* contain the file, but you building it from the doc reference lands in the same place, so no harm.
+
+The split you applied matches the intended design exactly: reads open everywhere (so the "Remove Rod" stranger test still passes), the six DB-mutating routers gated, the stateless compute routers left open. And your dev-mode verification (GET 200, POST 201 with the warn) is the right thing to check — that's fail-open-in-dev / fail-closed-in-prod behaving as designed.
+
+Two things worth saying plainly so nothing hides:
+
+**The `.replit` blocker is real and your read on its blast radius is correct.** It only bites on a cold fresh project load, because your six workflows are already individually defined and running. But don't let it quietly rot — the moment someone clones this or the workspace resets, the run button launches rapids-substrate alone and the api-server doesn't come up. Since the platform blocks direct edits, the fix is either the workflows skill (you flagged it) or editing it through the Replit workflow UI so the api-server task is in the parallel launcher. Worth doing before you forget the context, not after a cold boot surprises you.
+
+**One thing I want to confirm you didn't lose in the shuffle, because it's the sharp one.** This whole thread has been about Finding #5 (the auth gate) and the `.replit`/`replit.md`/`main.py` wiring. But the *original* audit's heaviest finding was #1 — the fabricating fallbacks — and it had three sites: `gemini.ts`, `observe.ts`, and `WeeklyTerrainMap.tsx`. Your earlier message said you'd patched gemini with uniform-`10` weights and status `"error"`. The questions from my last review still stand and I don't want them buried under the auth work:
+
+- Did `observe.ts`'s twin fallback (the fabricated 12/10/10 contributions under `success: true`) get fixed?
+- Did `WeeklyTerrainMap.tsx`'s "Validated" badge over fabricated evidence get fixed?
+- And on gemini specifically — did you tighten uniform-`10`/`"neutral"` to `null`/`"unknown"`, or is it still the symmetric-but-fabricated version?
+
+You don't owe me an answer turn-by-turn — but those three are the difference between "doctrine breach closed" and "doctrine breach made tidier." If you've already handled them in a pass I didn't see, say so and I'll drop it. If you want certainty instead of memory, re-drop the live workspace zip and I'll give you a per-finding closed/open scorecard with no guessing.
+
+Either way — solid work landing the auth gate. That was the one with real exposure.
