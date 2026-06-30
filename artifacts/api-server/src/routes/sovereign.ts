@@ -310,8 +310,8 @@ router.post("/sovereign/audits", async (req, res) => {
       logs: Array.isArray(logs) ? logs : [],
       signature: signature ?? `SIG-${Date.now()}`,
       createdAt,
-      verified: verified ?? true,
-      operatorDecision: operatorDecision ?? "APPROVED",
+      verified: verified ?? false,
+      operatorDecision: operatorDecision ?? "PENDING",
       divergenceState: divergenceState ?? "ALIGNED",
       divergenceDelta: divergenceDelta ?? 0,
     });

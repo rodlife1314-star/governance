@@ -324,31 +324,30 @@ Compress this ${label} market field into 10 dimensional readings. Contribution v
 }
 
 function buildFallback(body: Record<string, unknown>) {
-  const { basisDelta, volume, openInterest, btcDominance, depthBidsSpot } = body as Record<string, number>;
-  const marketStructure = basisDelta >= 0 ? "CONTANGO" : "BACKWARDATION";
+  const spotPrice = body.spotPrice as number | undefined;
   return {
     dimensions: [
-      { id: "dollar",       name: "Dollar / DXY",        signal: "Authority feed degraded — DXY direction unavailable",          contribution: 10, direction: "neutral" },
-      { id: "realyields",   name: "Real Yields",          signal: "Authority feed degraded — TIPS rate unavailable",              contribution: 8,  direction: "neutral" },
-      { id: "instflows",    name: "Institutional Flows",  signal: `Field OI $${((openInterest ?? 0) / 1e9).toFixed(1)}B — Binance feed degraded`,  contribution: 10, direction: "neutral" },
-      { id: "futures",      name: "Futures Positioning",  signal: `${marketStructure} basis $${Math.abs(basisDelta ?? 0).toFixed(0)} — funding rate feed degraded`, contribution: 12, direction: basisDelta >= 0 ? "positive" : "negative" },
-      { id: "onchain",      name: "On-Chain Activity",    signal: "Authority feed degraded — on-chain signal unavailable",        contribution: 9,  direction: "neutral" },
-      { id: "risksentiment",name: "Risk Sentiment",       signal: "VIX authority feed degraded — risk posture unavailable",       contribution: 7,  direction: "neutral" },
-      { id: "commodity",    name: "Commodity Complex",    signal: "WTI authority feed degraded — commodity signal unavailable",   contribution: 13, direction: "neutral" },
-      { id: "geopolitics",  name: "Geopolitics",          signal: "No authority feed — operator assessment required",             contribution: 5,  direction: "neutral" },
-      { id: "technical",    name: "Technical Structure",  signal: `Spot $${body.spotPrice ?? "??"} — QQQ feed degraded`,          contribution: 19, direction: "neutral" },
-      { id: "liquidity",    name: "Liquidity / Depth",    signal: `Field spread — Coinbase ticker feed degraded`,                 contribution: 7,  direction: "neutral" },
+      { id: "dollar",        name: "Dollar / DXY",        signal: "Authority feed degraded — DXY direction unavailable",          contribution: 10, direction: "neutral" },
+      { id: "realyields",    name: "Real Yields",          signal: "Authority feed degraded — TIPS rate unavailable",              contribution: 10, direction: "neutral" },
+      { id: "instflows",     name: "Institutional Flows",  signal: "Authority feed degraded — institutional flow signal unavailable", contribution: 10, direction: "neutral" },
+      { id: "futures",       name: "Futures Positioning",  signal: "Authority feed degraded — futures positioning unavailable",    contribution: 10, direction: "neutral" },
+      { id: "onchain",       name: "On-Chain Activity",    signal: "Authority feed degraded — on-chain signal unavailable",        contribution: 10, direction: "neutral" },
+      { id: "risksentiment", name: "Risk Sentiment",       signal: "Authority feed degraded — VIX risk posture unavailable",       contribution: 10, direction: "neutral" },
+      { id: "commodity",     name: "Commodity Complex",    signal: "Authority feed degraded — WTI commodity signal unavailable",   contribution: 10, direction: "neutral" },
+      { id: "geopolitics",   name: "Geopolitics",          signal: "No authority feed — operator assessment required",             contribution: 10, direction: "neutral" },
+      { id: "technical",     name: "Technical Structure",  signal: `Spot $${spotPrice ?? "unavailable"} — QQQ authority feed degraded, technical read unavailable`, contribution: 10, direction: "neutral" },
+      { id: "liquidity",     name: "Liquidity / Depth",    signal: "Authority feed degraded — liquidity signal unavailable",       contribution: 10, direction: "neutral" },
     ],
-    pattern: "Gemini unavailable — authority feeds degraded — operator field observation required",
+    pattern: "RAPIDS engine unavailable — all authority feeds degraded — operator field observation required",
     findings: [
-      { dimensionId: "futures",      text: `Futures basis ${basisDelta >= 0 ? "positive" : "negative"} $${Math.abs(basisDelta ?? 0).toFixed(0)} — ${marketStructure}` },
-      { dimensionId: "instflows",    text: `Field OI $${((openInterest ?? 0) / 1e9).toFixed(1)}B — authority feed degraded` },
-      { dimensionId: "technical",    text: `Spot $${(body.spotPrice as number | undefined) ?? "??"} — QQQ feed degraded, technical read unavailable` },
-      { dimensionId: "commodity",    text: `Volume $${((volume ?? 0) / 1e9).toFixed(1)}B — WTI commodity feed degraded` },
-      { dimensionId: "liquidity",    text: `Bid depth ${depthBidsSpot?.toFixed(0) ?? "?"} units — liquidity authority feed degraded` },
+      { dimensionId: "dollar",       text: "DXY authority feed degraded — dollar direction cannot be determined" },
+      { dimensionId: "realyields",   text: "TIPS rate feed degraded — real yield posture unavailable" },
+      { dimensionId: "technical",    text: `Spot $${spotPrice ?? "unavailable"} — QQQ feed degraded, no technical read` },
+      { dimensionId: "risksentiment",text: "VIX authority feed degraded — risk sentiment cannot be assessed" },
+      { dimensionId: "liquidity",    text: "Liquidity authority feed degraded — depth and spread unavailable" },
     ],
-    simonSummary: `RAPIDS engine unavailable. Authority feeds may be degraded. Field data preserved for operator review. Do not treat any dimension as authoritative — verify against direct market observation before committing.`,
-    rapidsCompression: `10 dimensions → authority feeds degraded → operator field assessment required`,
+    simonSummary: `RAPIDS engine unavailable — authority feeds degraded. No dimensional weights are authoritative. Do not use these readings to inform operator decisions — verify all dimensions against direct market observation before committing.`,
+    rapidsCompression: `10 dimensions → all feeds degraded → operator field assessment required`,
   };
 }
 
@@ -386,7 +385,7 @@ router.post("/gemini/dimensional-trigger", (req, res) => {
       rapidsCache.error = null;
     } catch {
       rapidsCache.analysis = buildFallback(req.body);
-      rapidsCache.status = "ready";
+      rapidsCache.status = "error";
       rapidsCache.computedAt = Date.now();
       rapidsCache.error = "Gemini unavailable — fallback applied, feeds degraded";
     }

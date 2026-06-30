@@ -118,7 +118,7 @@ export default function App() {
       try {
         const res = await fetch(getAbsoluteUrl("/api/gemini/dimensional-cache"));
         const data = await res.json();
-        if (data.status === "ready" && data.analysis && data.assetKey === assetId) {
+        if ((data.status === "ready" || data.status === "error") && data.analysis && data.assetKey === assetId) {
           applyAnalysis(data.analysis as Record<string, unknown>);
           stopPolling();
         }
@@ -147,7 +147,7 @@ export default function App() {
     try {
       const cacheRes = await fetch(getAbsoluteUrl("/api/gemini/dimensional-cache"));
       const cacheData = await cacheRes.json();
-      if (cacheData.status === "ready" && cacheData.analysis && cacheData.assetKey === assetId) {
+      if ((cacheData.status === "ready" || cacheData.status === "error") && cacheData.analysis && cacheData.assetKey === assetId) {
         applyAnalysis(cacheData.analysis as Record<string, unknown>);
         return;
       }
