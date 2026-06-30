@@ -4,21 +4,51 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
     <title>OCTAGON</title>
-    <meta name="description" content="OCTAGON — built on Replit. Update this description to reflect the app." />
+    <meta name="description" content="Local-first operator assistant. Manage memory, doctrine rules, routing decisions, and operational scenarios with full sovereignty. No cloud required." />
     <meta name="robots" content="index, follow" />
     <meta property="og:title" content="OCTAGON" />
-    <meta property="og:description" content="OCTAGON — built on Replit. Update this description to reflect the app." />
+    <meta property="og:description" content="Local-first operator assistant for sovereignty-first workflow management. Manage memory, doctrine rules, routing decisions, and operational scenarios." />
     <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://governance-rodlife1314.replit.app/" />
+    <meta property="og:image" content="/opengraph.jpg" />
+    <meta property="og:image:alt" content="OCTAGON — local-first operator assistant dashboard" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="OCTAGON" />
-    <meta name="twitter:description" content="OCTAGON — built on Replit. Update this description to reflect the app." />
+    <meta name="twitter:description" content="Local-first operator assistant for sovereignty-first workflow management. Manage memory, doctrine rules, routing decisions, and operational scenarios." />
+    <meta name="twitter:image" content="/opengraph.jpg" />
+    <script>
+      (function(){
+        var ms = document.querySelectorAll('meta[property="og:image"],meta[name="twitter:image"]');
+        ms.forEach(function(m){ if (!m.content.startsWith('http')) m.content = location.origin + m.content; });
+      })();
+    </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div style="background:#07080B;color:#c8d0e0;font-family:Inter,sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 24px;box-sizing:border-box;">
+        <div style="max-width:720px;margin:0 auto;text-align:center;">
+          <p style="font-family:'Space Mono',monospace;font-size:9px;letter-spacing:0.22em;color:rgba(79,195,247,0.5);margin-bottom:24px;">OPERATOR SYSTEM · LOCAL-FIRST · SOVEREIGNTY-PRESERVED</p>
+          <h1 style="font-family:'Space Mono',monospace;font-size:clamp(36px,8vw,72px);font-weight:700;letter-spacing:0.25em;color:#e8ecf8;line-height:1;margin-bottom:16px;">OCTAGON</h1>
+          <p style="font-family:'Space Mono',monospace;font-size:9px;letter-spacing:0.2em;color:rgba(200,207,224,0.25);margin-bottom:32px;">OPERATOR ASSISTANT · SEVEN-MODULE ARCHITECTURE</p>
+          <p style="font-size:15px;color:rgba(200,207,224,0.5);line-height:1.8;max-width:560px;margin:0 auto 48px;">
+            Local-first operator assistant for planning, organizing, and executing real operational workflows. Full sovereignty over memory, governance doctrine, routing decisions, and competition scenarios.
+          </p>
+          <nav style="display:flex;flex-wrap:wrap;gap:16px;justify-content:center;margin-bottom:48px;">
+            <a href="/dashboard" style="color:rgba(79,195,247,0.7);font-family:'Space Mono',monospace;font-size:10px;letter-spacing:0.14em;text-decoration:none;padding:8px 16px;border:1px solid rgba(79,195,247,0.2);border-radius:3px;">DASHBOARD</a>
+            <a href="/memory" style="color:rgba(79,195,247,0.7);font-family:'Space Mono',monospace;font-size:10px;letter-spacing:0.14em;text-decoration:none;padding:8px 16px;border:1px solid rgba(79,195,247,0.2);border-radius:3px;">MEMORY BANK</a>
+            <a href="/doctrine" style="color:rgba(79,195,247,0.7);font-family:'Space Mono',monospace;font-size:10px;letter-spacing:0.14em;text-decoration:none;padding:8px 16px;border:1px solid rgba(79,195,247,0.2);border-radius:3px;">DOCTRINE</a>
+            <a href="/workflows" style="color:rgba(79,195,247,0.7);font-family:'Space Mono',monospace;font-size:10px;letter-spacing:0.14em;text-decoration:none;padding:8px 16px;border:1px solid rgba(79,195,247,0.2);border-radius:3px;">WORKFLOWS</a>
+            <a href="/routing" style="color:rgba(79,195,247,0.7);font-family:'Space Mono',monospace;font-size:10px;letter-spacing:0.14em;text-decoration:none;padding:8px 16px;border:1px solid rgba(79,195,247,0.2);border-radius:3px;">ROUTING</a>
+            <a href="/scenarios" style="color:rgba(79,195,247,0.7);font-family:'Space Mono',monospace;font-size:10px;letter-spacing:0.14em;text-decoration:none;padding:8px 16px;border:1px solid rgba(79,195,247,0.2);border-radius:3px;">SCENARIOS</a>
+          </nav>
+          <p style="font-family:'Space Mono',monospace;font-size:8px;letter-spacing:0.16em;color:rgba(79,195,247,0.2);">⬡ SYS_STATUS · MEMORY_BANK · DOCTRINE · WORKFLOWS · ROUTING · SCENARIOS</p>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
