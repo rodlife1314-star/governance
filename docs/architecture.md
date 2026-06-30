@@ -28,6 +28,47 @@ The goal is not automated execution. The goal is informed operator judgement.
 
 ---
 
+## The Edge–Centre–Edge Return Path
+
+This is the fundamental architecture of the governed system.
+
+```
+EDGE  →  CENTRE  →  EDGE
+```
+
+The edge sees the disturbance first. The centre does not react immediately — it interprets. The signal returns to the edge not as raw noise, but as a governed instruction.
+
+```
+1. EDGE          Unexpected observation appears.
+2. SIGNAL        Disturbance enters the system.
+3. → CENTRE      Observation is pulled into doctrine, memory, evidence, and pattern.
+4. INTERPRETATION Centre decides: reinforce, block, reroute, expand, or transform.
+5. LINK          The instruction is encoded into the geometry of the crossing.
+6. RETURN → EDGE The edge now acts with governed behaviour.
+7. VERIFICATION  Did the edge response preserve identity and complete the transition?
+```
+
+**The mapping onto PATHFINDER:**
+
+| Pattern | Layer |
+|---------|-------|
+| EDGE (first contact) | AETHER |
+| SIGNAL → CENTRE | HERMES |
+| LATTICE LAW (what the centre holds) | DOCTRINE |
+| LINK / GEOMETRY (crossing surface) | DELTA |
+| RETURN → EDGE (governed action at boundary) | CRYSTAL BRIDGE |
+| VERIFICATION | SOVEREIGN |
+
+**The law:**
+
+> The centre holds the law. The edge meets reality. The link translates law into action.
+
+> The edge does not guess. The edge executes the centre's returned instruction through the geometry of the link.
+
+> A governed edge is not a boundary. It is a programmable decision surface.
+
+---
+
 ## Layer Definitions
 
 ### AETHER — Map Uncertainty
@@ -135,6 +176,38 @@ This layer is the missing bridge between JEMMA (validation) and OCTAGON (governa
 - Reflection time — time-under-review, not time-to-click
 - Acquisition ledger — permanent record of what has been internalized vs. seen
 
+**The DELTA crossing law:**
+
+The physical principle is *reaction-constrained atomic geometry*: geometry constrains which state transitions are permitted, not by saying "no," but by making only the governed path structurally viable.
+
+You do not send the instruction through DELTA. You shape DELTA so the instruction is the only path available.
+
+```
+POINT A  →  DELTA GAP  →  POINT B
+
+A = current state (validated finding)
+B = required state (operator-internalized intelligence)
+DELTA = everything that can corrupt the crossing: noise, surface pattern-matching,
+        confirmation bias, time pressure, incomplete internalization
+```
+
+**Requirements for a valid DELTA crossing:**
+
+| Requirement | Meaning |
+|-------------|---------|
+| Identity | What is crossing? (the specific finding, not a generalisation) |
+| Direction | Where is it going? (from validated evidence into operator action) |
+| Constraint | What must not happen? (pattern-matching without internalization) |
+| Boundary | What separates A from B? (the acquisition membrane) |
+| Energy budget | What force moves it? (operator reflection time, challenge, confirmation) |
+| Geometry | What shape permits passage? (the acquisition ledger structure) |
+| State control | What changes during crossing? (seen → internalized → executable) |
+| Verification | How do we know it crossed correctly? (sovereign audit record) |
+
+**The crossing law:**
+
+> A DELTA crossing requires a bridge that preserves identity, constrains reaction, and verifies arrival.
+
 **The Tree (AI Studio clone) is the laboratory for this layer.** The governance repo is the doctrine source for its specification.
 
 ---
@@ -166,6 +239,16 @@ The OCTAGON's 8-sided geometry defines the boundary of the navigable space. Eigh
 Crystal Bridge is not a router. It is a projector — taking the unseen structure the operator has navigated through and rendering it into a visible, authorized, executable dimension.
 
 The bridge only becomes available after the full traversal: AETHER → HERMES → RAPIDS → SIMON → JEMMA → OCTAGON. Navigation is mandatory. There is no shortcut.
+
+**The governed edge doctrine:**
+
+CRYSTAL BRIDGE is the return edge. The observation entered through AETHER (the first contact surface). The centre processed it through doctrine, memory, and evidence. The instruction now returns to the edge — not as raw noise, but as a governed, operator-authorized action.
+
+> A governed edge is not a boundary. It is a programmable decision surface.
+
+The centre holds the law. The edge meets reality. The link (DELTA) translates law into action.
+
+The shape of the authority chain, the coverage requirements, the operator approval gate — these are not walls. They are geometry. They determine which state transitions are structurally possible. The circuit is the instruction.
 
 **CRYSTAL BRIDGE may:** Prepare dispatch packets · Present approved workloads · Record authorization events
 
