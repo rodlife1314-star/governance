@@ -1,0 +1,40 @@
+I'll audit it properly. Let me read the core configs, doctrine, and the high-risk areas (provenance enforcement, the duplicate Gemini packages, deployment wiring).
+
+Now the high-risk areas: provenance enforcement, the duplicate Gemini packages, and the routing/sovereign/spectra logic. Let me read those.
+
+Let me check the index/routing wiring, the duplicate Gemini packages, and the spectra route, then I'll write the audit up.
+
+I have enough to write a complete audit. Let me do two final checks: the provenance/reality-first memory notes and whether the second Gemini package is actually imported anywhere (dead code or live duplication).
+
+Good — no committed secrets (the `DEMO_KEY` is NASA's public demo key). I have everything I need. Here's the audit.
+
+## Pathfinder / Governance — Audit Summary
+
+**Overall:** Architecturally sound and the reality-first doctrine is genuinely enforced in code, not just docs. The provenance discipline (`sovereign.ts` refusing to serve when spot is null, `null` + `dataQuality` tagging, the prompt integrity guard in both system and user prompts) holds up. The issues below are wiring and consistency problems, not doctrine breaches — except one, which touches your no-fabrication law.
+
+### Findings, ranked
+
+**1. The fallback path quietly violates reality-first doctrine (highest priority)**
+In `gemini.ts`, `/gemini/dimensional-trigger` catches a failure and calls `buildFallback()`, which writes invented `contribution` integers (10, 8, 12, 19…) and `direction` values into the cache as a `ready` analysis. The signal *text* says "degraded," but the numbers are fabricated and the status flag reads `ready`, not `degraded`. A downstream consumer reading the structured fields — not the prose — receives manufactured contributions. Your own `pathfinder-reality-first.md` says "a blank field is always preferable to a fabricated one." The fallback should set `status: "error"` (or a `degraded` flag) and null the numeric fields, or carry an explicit `fabricated: true` marker. This is the one item I'd not sleep past.
+
+**2. Identity split: README/runtime is PATHFINDER, `replit.md` is OCTAGON**
+`replit.md` describes a 7-module OCTAGON product, names the repo `octagon-augment`, and lists a different architecture. The `.replit` runButton launches *only* `rapids-substrate` (uvicorn), not the api-server or any frontend. So the documented dev entry, the README run instructions, and the actual Replit workflow disagree three ways. Decide which is canonical and align the other two.
+
+**3. Dead duplicate Gemini package**
+`lib/integrations/gemini_ai_integrations/` is imported nowhere (confirmed by grep). The live one is `lib/integrations-gemini-ai/`. Delete the former — it's the leftover duplication I flagged earlier, and keeping two diverging Gemini clients is a future footgun.
+
+**4. Deploy target only builds the API, but doctrine lives in the frontends**
+`Dockerfile` + `cloudbuild.yaml` build and deploy only `@workspace/api-server` to Cloud Run (`governance`, europe-west2, `--allow-unauthenticated`). None of the four React artifacts (pathfinder, spectra7, octagon, mockup) are built or served by that image. If the live service is meant to serve a UI, this pipeline doesn't — it's API-only. Confirm that's intended.
+
+**5. `--allow-unauthenticated` on a service that writes to your DB**
+`/api/sovereign/audits` POST and `/language/authorities` POST/DELETE are open to the internet with no auth middleware (`app.ts` has cors + json only). Anyone can write audit records or delete language authorities. For a sovereignty-themed system this is the sharpest contradiction — the operator-authorization principle isn't enforced at the HTTP boundary.
+
+**6. Minor consistency notes**
+- `pyproject.toml` lists `scikit-learn`/`networkx` but `rapids-substrate/requirements.txt` is the real dependency set — root pyproject looks like Replit scaffolding (`main.py` is still "Hello from repl-nix-workspace").
+- DELTA layer is in the README architecture diagram marked `[not yet built]` — fine, just noting the pipeline is 7 of 8.
+- `sovereign.ts` audit POST defaults `verified: true` and `operatorDecision: "APPROVED"` when fields are absent — defaulting an *audit* record to approved-and-verified is a weak default for a governance log.
+
+### What's working well
+The `context-custody-law` (packet domain immutability through AETHER→RAPIDS→HERMES→JEMMA) is correctly documented and the rationale is exactly right — it prevents the "correct indicator, wrong timeframe" class. The BTC live-feed refusal logic and the NVIDIA/Gemini adapter abstraction (`inferenceAdapter.ts`) are clean.
+
+Sleep on #1 and #5 specifically — those are the two where the code diverges from the doctrine the system is built to enforce. The rest is cleanup. I can draft fixes for any of these when you're ready.
