@@ -1,8 +1,15 @@
 # JEMMA HANDSHAKE
 > Context packet for Jemma — AI Studio assistant operating inside The Tree
-> Version: 2.0 · Updated: 2026-06-16 · Doctrine source: rodlife1314-star/governance
+> Version: 2.1 · Updated: 2026-07-04 · Doctrine source: rodlife1314-star/governance
 
 Paste this document in full at the start of any session with Jemma.
+
+---
+
+## CURRENT STATE — WHAT CHANGED SINCE THE LAST HANDSHAKE (2026-07-04)
+
+- **Cloud Build fixed.** The production deploy pipeline (`cloudbuild.yaml` → Cloud Run service `governance`, `europe-west2`) was failing with a `build.service_account` / logging-bucket error. Fixed by adding an explicit `options.logging: CLOUD_LOGGING_ONLY` block to `cloudbuild.yaml`. Committed and pushed to `rodlife1314-star/governance` (`main`).
+- This is an operational/deployment fix, not a doctrine change — it does not alter any layer's role, the authority chain, or sovereignty rules. Noted here only so you have an accurate picture of Ripley's most recent action if Rod asks.
 
 ---
 
